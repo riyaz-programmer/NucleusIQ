@@ -5,7 +5,9 @@ from __future__ import annotations
 from typing import Any
 
 
-def build_analyst_memos(issuers: list[dict[str, Any]], comparison: dict[str, Any]) -> list[dict[str, Any]]:
+def build_analyst_memos(
+    issuers: list[dict[str, Any]], comparison: dict[str, Any]
+) -> list[dict[str, Any]]:
     tcs = next(i for i in issuers if i["issuer_id"] == "tcs")
     hcl = next(i for i in issuers if i["issuer_id"] == "hcl")
     tk, hk = tcs["key_metrics"], hcl["key_metrics"]

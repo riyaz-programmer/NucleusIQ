@@ -13,17 +13,16 @@ import os
 from pathlib import Path
 from typing import Any
 
-from pydantic import BaseModel, Field
-
 from nucleusiq.agents.agent import Agent
 from nucleusiq.agents.config import AgentConfig, ExecutionMode
 from nucleusiq.agents.task import Task
 from nucleusiq.agents.usage.pricing import CostTracker
 from nucleusiq.memory.factory import MemoryFactory, MemoryStrategy
-from nucleusiq.prompts.zero_shot import ZeroShotPrompt
 from nucleusiq.plugins.builtin.model_call_limit import ModelCallLimitPlugin
 from nucleusiq.plugins.builtin.tool_call_limit import ToolCallLimitPlugin
 from nucleusiq.plugins.builtin.tool_retry import ToolRetryPlugin
+from nucleusiq.prompts.zero_shot import ZeroShotPrompt
+from pydantic import BaseModel, Field
 
 from .pack_tools import PackContext, make_pack_tools
 from .paths import OBJECTIONS_OUTPUT, PACK_OUTPUT, PREBRIEF_OUTPUT
@@ -204,10 +203,14 @@ def format_usage(agent: Agent) -> str:
 async def run_preload(pack_path: Path | None = None) -> dict[str, Any]:
     path = pack_path or PACK_OUTPUT
     ctx = PackContext(path)
-    agent = build_showcase_agent(ctx, ExecutionMode.STANDARD, name="devils-advocate-preload")
+    agent = build_showcase_agent(
+        ctx, ExecutionMode.STANDARD, name="devils-advocate-preload"
+    )
     await agent.initialize()
 
-    result = await agent.execute(Task(id="preload-devils-advocate", objective=PRELOAD_TASK))
+    result = await agent.execute(
+        Task(id="preload-devils-advocate", objective=PRELOAD_TASK)
+    )
     text = str(result.output or "")
     PREBRIEF_OUTPUT.parent.mkdir(parents=True, exist_ok=True)
     PREBRIEF_OUTPUT.write_text(text, encoding="utf-8")
@@ -216,9 +219,13 @@ async def run_preload(pack_path: Path | None = None) -> dict[str, Any]:
         start, end = text.find("{"), text.rfind("}") + 1
         if start >= 0 < end:
             reg = ObjectionRegister.model_validate_json(text[start:end])
-            OBJECTIONS_OUTPUT.write_text(reg.model_dump_json(indent=2), encoding="utf-8")
+            OBJECTIONS_OUTPUT.write_text(
+                reg.model_dump_json(indent=2), encoding="utf-8"
+            )
     except Exception:
-        OBJECTIONS_OUTPUT.write_text(json.dumps({"raw": text}, indent=2), encoding="utf-8")
+        OBJECTIONS_OUTPUT.write_text(
+            json.dumps({"raw": text}, indent=2), encoding="utf-8"
+        )
 
     return {
         "status": str(result.status),
@@ -240,9 +247,13 @@ async def run_preload(pack_path: Path | None = None) -> dict[str, Any]:
 class ChairChatSession:
     """One Agent + one memory strategy for multi-turn chair chat."""
 
-    def __init__(self, pack_path: Path | None = None, memory_strategy: str | None = None) -> None:
+    def __init__(
+        self, pack_path: Path | None = None, memory_strategy: str | None = None
+    ) -> None:
         self.pack_path = pack_path or PACK_OUTPUT
-        self.memory_strategy = memory_strategy or os.environ.get("MEMORY_STRATEGY", "sliding_window")
+        self.memory_strategy = memory_strategy or os.environ.get(
+            "MEMORY_STRATEGY", "sliding_window"
+        )
         self.ctx = PackContext(self.pack_path)
         self.memory = create_memory(self.memory_strategy)
         self.agent = build_showcase_agent(

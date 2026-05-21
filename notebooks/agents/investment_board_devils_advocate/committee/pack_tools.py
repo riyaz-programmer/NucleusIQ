@@ -88,7 +88,9 @@ def make_pack_tools(ctx: PackContext) -> list:
             f"Color: {rollup.get('color')} | Score: {rollup.get('score_pct')}% | section_id: {rollup.get('section_id')}"
         )
         lines.append("")
-        lines.append("Use get_pack_section('credit_memo.recommendation') etc. for full text.")
+        lines.append(
+            "Use get_pack_section('credit_memo.recommendation') etc. for full text."
+        )
         return "\n".join(lines)
 
     @tool
@@ -126,7 +128,9 @@ def make_pack_tools(ctx: PackContext) -> list:
         keys = sorted(ctx.index.keys())
         if prefix:
             keys = [k for k in keys if k.startswith(prefix)]
-        return "\n".join(keys[:60]) + (f"\n... ({len(keys)} total)" if len(keys) > 60 else "")
+        return "\n".join(keys[:60]) + (
+            f"\n... ({len(keys)} total)" if len(keys) > 60 else ""
+        )
 
     @tool
     def search_pack(keyword: str) -> str:

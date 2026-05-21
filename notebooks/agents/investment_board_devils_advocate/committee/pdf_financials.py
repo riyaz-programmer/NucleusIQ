@@ -92,12 +92,18 @@ def _parse_tcs_bs(text: str) -> dict[str, Any]:
             {
                 "line": "Total assets",
                 "section_id": "tcs.financials.bs.total_assets",
-                "values": {fy24: _n(total_assets.group(2)), fy25: _n(total_assets.group(1))},
+                "values": {
+                    fy24: _n(total_assets.group(2)),
+                    fy25: _n(total_assets.group(1)),
+                },
             },
             {
                 "line": "Total equity",
                 "section_id": "tcs.financials.bs.total_equity",
-                "values": {fy24: _n(total_equity.group(2)), fy25: _n(total_equity.group(1))},
+                "values": {
+                    fy24: _n(total_equity.group(2)),
+                    fy25: _n(total_equity.group(1)),
+                },
             },
             {
                 "line": "Cash and cash equivalents",
@@ -152,7 +158,11 @@ def _parse_hcl_pl(text: str) -> dict[str, Any]:
 
 
 def _parse_hcl_bs(text: str) -> dict[str, Any]:
-    clean = text.replace("/r_t.liga", "rt").replace("/uni20B9", "₹").replace("T otal", "Total")
+    clean = (
+        text.replace("/r_t.liga", "rt")
+        .replace("/uni20B9", "₹")
+        .replace("T otal", "Total")
+    )
 
     def _n(s: str) -> float:
         return float(re.sub(r"\s+", "", s).replace(",", ""))

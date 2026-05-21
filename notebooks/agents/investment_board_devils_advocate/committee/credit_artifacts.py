@@ -9,7 +9,9 @@ def _issuer(issuers: list[dict[str, Any]], issuer_id: str) -> dict[str, Any]:
     return next(i for i in issuers if i["issuer_id"] == issuer_id)
 
 
-def build_credit_analysis(issuers: list[dict[str, Any]], comparison: dict[str, Any]) -> dict[str, Any]:
+def build_credit_analysis(
+    issuers: list[dict[str, Any]], comparison: dict[str, Any]
+) -> dict[str, Any]:
     tcs = _issuer(issuers, "tcs")
     hcl = _issuer(issuers, "hcl")
     tk, hk = tcs["key_metrics"], hcl["key_metrics"]
@@ -38,7 +40,9 @@ def build_credit_analysis(issuers: list[dict[str, Any]], comparison: dict[str, A
                     "pat_yoy_pct": tk["profit_yoy_pct"],
                     "net_margin_pct": tk["net_margin_pct_fy2025"],
                     "cash_to_assets_pct": tk["cash_to_assets_pct_fy2025"],
-                    "equity_inr_crore_fy25": tcs["financials"]["balance_sheet"][1]["values"]["FY2025"],
+                    "equity_inr_crore_fy25": tcs["financials"]["balance_sheet"][1][
+                        "values"
+                    ]["FY2025"],
                 },
                 "credit_view": "Strong cash generation; margin superior to peer set in pack.",
             },
@@ -52,7 +56,9 @@ def build_credit_analysis(issuers: list[dict[str, Any]], comparison: dict[str, A
                     "pat_yoy_pct": hk["profit_yoy_pct"],
                     "net_margin_pct": hk["net_margin_pct_fy2025"],
                     "cash_to_assets_pct": hk["cash_to_assets_pct_fy2025"],
-                    "equity_inr_crore_fy25": hcl["financials"]["balance_sheet"][1]["values"]["FY2025"],
+                    "equity_inr_crore_fy25": hcl["financials"]["balance_sheet"][1][
+                        "values"
+                    ]["FY2025"],
                 },
                 "credit_view": "Faster PAT growth but lower margin; balance sheet detail on intangibles not in excerpt.",
             },
@@ -102,7 +108,9 @@ def build_credit_analysis(issuers: list[dict[str, Any]], comparison: dict[str, A
     }
 
 
-def build_credit_memo(issuers: list[dict[str, Any]], credit_analysis: dict[str, Any]) -> dict[str, Any]:
+def build_credit_memo(
+    issuers: list[dict[str, Any]], credit_analysis: dict[str, Any]
+) -> dict[str, Any]:
     tcs = _issuer(issuers, "tcs")
     hcl = _issuer(issuers, "hcl")
     alloc = credit_analysis["proposed_allocation"]
@@ -170,7 +178,9 @@ def build_credit_memo(issuers: list[dict[str, Any]], credit_analysis: dict[str, 
     }
 
 
-def build_rm_memo(issuers: list[dict[str, Any]], credit_analysis: dict[str, Any]) -> dict[str, Any]:
+def build_rm_memo(
+    issuers: list[dict[str, Any]], credit_analysis: dict[str, Any]
+) -> dict[str, Any]:
     tcs = _issuer(issuers, "tcs")
     hcl = _issuer(issuers, "hcl")
 

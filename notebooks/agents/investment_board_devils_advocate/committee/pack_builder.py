@@ -63,7 +63,10 @@ def build_pack() -> dict[str, Any]:
         "preparation_audit": {
             "pipeline": "investment_board_devils_advocate",
             "signed_off": True,
-            "sources": ["research/hcl_2025_Financial_report.pdf", "research/tcs_annual_report-2025.pdf"],
+            "sources": [
+                "research/hcl_2025_Financial_report.pdf",
+                "research/tcs_annual_report-2025.pdf",
+            ],
         },
         "disclaimer": DISCLAIMER,
     }
@@ -85,4 +88,6 @@ if __name__ == "__main__":
     print(f"  issuers: {[i['issuer_id'] for i in p['issuers']]}")
     print(f"  analyst_memos: {len(p['analyst_memos'])}")
     print(f"  credit_memo: {p['credit_memo']['recommendation']}")
-    print(f"  rm_memo: {p['rm_memo']['recommendation']} @ ${p['rm_memo']['proposed_allocation_usd']:,}")
+    print(
+        f"  rm_memo: {p['rm_memo']['recommendation']} @ ${p['rm_memo']['proposed_allocation_usd']:,}"
+    )
