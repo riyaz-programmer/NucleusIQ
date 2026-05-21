@@ -1,0 +1,90 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "InvestmentCommitteePack",
+  "type": "object",
+  "required": [
+    "meta",
+    "issuers",
+    "credit_analysis",
+    "credit_memo",
+    "rm_memo",
+    "commentary_thread",
+    "analyst_memos",
+    "disclaimer"
+  ],
+  "properties": {
+    "meta": {
+      "type": "object",
+      "required": ["position_usd_min", "position_usd_max", "meeting_date", "pack_version", "report_fiscal_year"],
+      "properties": {
+        "position_usd_min": { "type": "number" },
+        "position_usd_max": { "type": "number" },
+        "meeting_date": { "type": "string" },
+        "pack_version": { "type": "string" },
+        "report_fiscal_year": { "const": "FY2025" }
+      }
+    },
+    "issuers": {
+      "type": "array",
+      "minItems": 2,
+      "maxItems": 2,
+      "items": {
+        "type": "object",
+        "required": ["issuer_id", "company_name", "company_profile", "financials", "key_metrics", "source_pdf"],
+        "properties": {
+          "issuer_id": { "enum": ["tcs", "hcl"] },
+          "company_name": { "type": "string" },
+          "ticker": { "type": "string" },
+          "company_profile": { "type": "object" },
+          "financials": { "type": "object" },
+          "key_metrics": { "type": "object" },
+          "source_pdf": { "type": "string" }
+        }
+      }
+    },
+    "comparison": { "type": "object" },
+    "credit_analysis": { "type": "object" },
+    "credit_memo": { "type": "object" },
+    "rm_memo": { "type": "object" },
+    "commentary_thread": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["author", "date", "section_id", "text"],
+        "properties": {
+          "author": { "type": "string" },
+          "role": { "type": "string" },
+          "date": { "type": "string" },
+          "section_id": { "type": "string" },
+          "text": { "type": "string" }
+        }
+      }
+    },
+    "market_context": { "type": "object" },
+    "analyst_memos": {
+      "type": "array",
+      "minItems": 5,
+      "maxItems": 5,
+      "items": {
+        "type": "object",
+        "required": ["analyst_id", "stance", "thesis", "section_id"],
+        "properties": {
+          "analyst_id": { "type": "string" },
+          "display_name": { "type": "string" },
+          "stance": { "enum": ["buy", "hold", "sell"] },
+          "conviction": { "enum": ["high", "medium", "low"] },
+          "target_position_usd": { "type": "number" },
+          "thesis": { "type": "string" },
+          "key_risks": { "type": "array", "items": { "type": "string" } },
+          "section_id": { "type": "string" }
+        }
+      }
+    },
+    "chair_brief": { "type": "string" },
+    "exhibits_index": { "type": "array" },
+    "preparation_audit": { "type": "object" },
+    "disclaimer": { "type": "string" }
+  },
+  "additionalProperties": true
+}

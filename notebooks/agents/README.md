@@ -9,6 +9,15 @@ End-to-end notebooks demonstrating how to build autonomous agents with NucleusIQ
 | [PE Due Diligence](pe_due_diligence.ipynb) | Private Equity | 8 multi-step financial analyses — WACC, DCF, LBO IRR, merger math. Compares Standard vs Autonomous modes with external validation. |
 | [TCS Research Analyst](research_analyst_tcs.ipynb) | Equity research (India IT) | **Full framework showcase**: Gemini + custom `@tool` (PDF + web), Pydantic structured output, plugins (limits + retry), SlidingWindowMemory, CostTracker, streaming, pandas visualization, feature proof dashboard. |
 
+### Investment board devil's advocate (**active**)
+
+Chair allocates **$500K–$1M** across **TCS vs HCL** using **FY2025 reports only** (`research/hcl_2025_…`, `research/tcs_annual_report-2025.pdf`) + **five analyst memos**. Agent plays devil's advocate.
+
+| Resource | Purpose |
+|----------|---------|
+| [devils_advocate_showcase.ipynb](investment_board_devils_advocate/notebooks/devils_advocate_showcase.ipynb) | **Start here** — one notebook: data prep + chat |
+| [Use-case spec](../../docs/use-cases/investment-board-devils-advocate-agent.md) | Requirements |
+
 ## How to Run
 
 1. **Install dependencies**:
@@ -50,6 +59,7 @@ notebooks/
   agents/
     pe_due_diligence.ipynb
     research_analyst_tcs.ipynb
-    data/tcs/                    # optional: drop TCS annual report PDFs here
+    investment_board_devils_advocate/notebooks/devils_advocate_showcase.ipynb
+    data/tcs/                          # optional: TCS annual report PDFs
     README.md
 ```
