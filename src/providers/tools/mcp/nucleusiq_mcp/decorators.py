@@ -44,9 +44,13 @@ def mcp_tool_filter(
         def read_only(spec):
             return spec.name.startswith(("get_", "list_", "search_"))
 
-        agent = Agent(..., tools=[
-            MCPTool("https://mcp.example.com", auth="...", tool_filter=read_only),
-        ])
+
+        agent = Agent(
+            ...,
+            tools=[
+                MCPTool("https://mcp.example.com", auth="...", tool_filter=read_only),
+            ],
+        )
 
     The decorated function behaves exactly like the original predicate;
     metadata is attached as attributes (``.filter_name``,
@@ -85,9 +89,12 @@ class MCPToolset:
             mcp_tool_filter(name="not_admin")(lambda s: "admin" not in s.name),
         )
 
-        agent = Agent(..., tools=[
-            MCPTool("https://mcp.example.com", tool_filter=toolset),
-        ])
+        agent = Agent(
+            ...,
+            tools=[
+                MCPTool("https://mcp.example.com", tool_filter=toolset),
+            ],
+        )
     """
 
     def __init__(

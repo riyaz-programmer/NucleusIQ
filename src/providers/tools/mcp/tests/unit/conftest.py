@@ -5,7 +5,6 @@ from __future__ import annotations
 from typing import Any
 
 import pytest
-
 from nucleusiq_mcp.config import MCPServerConfig
 from nucleusiq_mcp.models import MCPContent, MCPToolResult, MCPToolSpec
 

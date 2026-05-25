@@ -215,9 +215,9 @@ class OAuthAuth:
                 response_types=["code"],
                 scope="read write",
             ),
-            storage=my_token_storage,           # implements TokenStorage
-            redirect_handler=open_browser,      # async def(str) -> None
-            callback_handler=wait_for_callback, # async def() -> (code, state)
+            storage=my_token_storage,  # implements TokenStorage
+            redirect_handler=open_browser,  # async def(str) -> None
+            callback_handler=wait_for_callback,  # async def() -> (code, state)
         )
         MCPTool("https://mcp.example.com/api", auth=OAuthAuth(provider=provider))
 

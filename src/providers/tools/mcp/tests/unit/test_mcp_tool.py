@@ -4,12 +4,12 @@ from __future__ import annotations
 
 import pytest
 from nucleusiq.tools import ExpandableTool
-
 from nucleusiq_mcp.auth import BearerAuth, CustomHeadersAuth, EnvAuth
 from nucleusiq_mcp.bound_tool import MCPBoundTool
 from nucleusiq_mcp.config import MCPTransport
 from nucleusiq_mcp.mcp_tool import MCPTool
 from nucleusiq_mcp.models import MCPToolSpec
+
 from tests.unit.conftest import FakeMCPSession
 
 # ====================================================================== #

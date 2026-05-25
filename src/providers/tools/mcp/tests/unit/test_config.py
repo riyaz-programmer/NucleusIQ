@@ -3,8 +3,6 @@
 from __future__ import annotations
 
 import pytest
-from pydantic import ValidationError
-
 from nucleusiq_mcp.auth import BearerAuth
 from nucleusiq_mcp.config import (
     MCPServerConfig,
@@ -12,6 +10,7 @@ from nucleusiq_mcp.config import (
     _derive_name,
     infer_transport,
 )
+from pydantic import ValidationError
 
 
 class TestInferTransport:

@@ -4,10 +4,10 @@ from __future__ import annotations
 
 import pytest
 from nucleusiq.tools.errors import ToolExecutionError
-
 from nucleusiq_mcp.bound_tool import MCPBoundTool, format_result
 from nucleusiq_mcp.exceptions import MCPToolError
 from nucleusiq_mcp.models import MCPContent, MCPToolResult, MCPToolSpec
+
 from tests.unit.conftest import FakeMCPSession
 
 # ====================================================================== #

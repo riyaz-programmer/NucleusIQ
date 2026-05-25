@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import pytest
-
 from nucleusiq_mcp.exceptions import (
     MCPAuthError,
     MCPProtocolError,

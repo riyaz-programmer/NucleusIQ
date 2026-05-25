@@ -64,9 +64,7 @@ class _MockAdapter:
         if self.connect_should_fail:
             raise RuntimeError(f"connect failed for adapter prefix={self.prefix!r}")
 
-    async def expand(
-        self, existing_names: set[str] | None = None
-    ) -> list[BaseTool]:
+    async def expand(self, existing_names: set[str] | None = None) -> list[BaseTool]:
         self.expand_calls += 1
         self.last_existing_names = (
             set(existing_names) if existing_names is not None else None
@@ -77,7 +75,9 @@ class _MockAdapter:
         elif existing_names and self.on_collision == "auto_prefix":
             renamed = []
             for n in names:
-                renamed.append(f"{self.prefix or 'mock'}_{n}" if n in existing_names else n)
+                renamed.append(
+                    f"{self.prefix or 'mock'}_{n}" if n in existing_names else n
+                )
             names = renamed
         return [_MockBoundTool(name=n) for n in names]
 

@@ -147,6 +147,7 @@ class MCPTool:
     GitHub local stdio (token from env)::
 
         from nucleusiq_mcp import EnvAuth
+
         MCPTool(
             "npx -y @modelcontextprotocol/server-github",
             env={"GITHUB_TOKEN": "<token>"},  # passed to subprocess

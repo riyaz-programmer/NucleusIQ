@@ -210,7 +210,8 @@ class Agent(BaseAgent):
                     if isinstance(res, BaseException):
                         self._logger.error(
                             "ExpandableTool adapter %r failed to connect: %s",
-                            adapter, res,
+                            adapter,
+                            res,
                         )
                         raise res
 
@@ -273,7 +274,9 @@ class Agent(BaseAgent):
             try:
                 await self._cleanup_expandable_tools()
             except BaseException:  # noqa: BLE001 — cleanup must never mask original
-                self._logger.exception("Adapter cleanup failed during initialize rollback")
+                self._logger.exception(
+                    "Adapter cleanup failed during initialize rollback"
+                )
             raise
 
     async def _cleanup_expandable_tools(self) -> None:
@@ -297,7 +300,8 @@ class Agent(BaseAgent):
         for adapter, res in zip(adapters, results, strict=True):
             if isinstance(res, Exception):
                 self._logger.warning(
-                    "ExpandableTool adapter disconnect failed: %r", adapter,
+                    "ExpandableTool adapter disconnect failed: %r",
+                    adapter,
                     exc_info=res,
                 )
         # Clear the list so a subsequent initialize starts clean.

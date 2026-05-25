@@ -5,7 +5,6 @@ from __future__ import annotations
 import pytest
 from nucleusiq.errors.base import NucleusIQError
 from nucleusiq.tools.errors import ToolError, ToolExecutionError
-
 from nucleusiq_mcp.exceptions import (
     MCPAuthError,
     MCPConnectionError,

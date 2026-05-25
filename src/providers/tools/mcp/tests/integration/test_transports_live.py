@@ -12,9 +12,9 @@ Run with::
 from __future__ import annotations
 
 import pytest
-
 from nucleusiq_mcp import MCPSession, MCPTool
 from nucleusiq_mcp.config import MCPServerConfig, MCPTransport
+
 from tests.integration.conftest import requires_node
 
 pytestmark = [pytest.mark.integration, requires_node, pytest.mark.asyncio]

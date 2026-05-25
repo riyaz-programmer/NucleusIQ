@@ -38,8 +38,8 @@ from nucleusiq.agents.agent import Agent
 from nucleusiq.agents.config.agent_config import AgentConfig
 from nucleusiq.agents.task import Task
 from nucleusiq.prompts.zero_shot import ZeroShotPrompt
-
 from nucleusiq_mcp import MCPTool
+
 from tests.integration.conftest import requires_node
 
 pytestmark = [pytest.mark.integration, requires_node, pytest.mark.asyncio]

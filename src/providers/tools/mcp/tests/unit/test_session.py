@@ -14,7 +14,6 @@ from types import SimpleNamespace
 from typing import Any
 
 import pytest
-
 from nucleusiq_mcp.auth import BearerAuth
 from nucleusiq_mcp.config import MCPServerConfig, MCPTransport
 from nucleusiq_mcp.exceptions import (
