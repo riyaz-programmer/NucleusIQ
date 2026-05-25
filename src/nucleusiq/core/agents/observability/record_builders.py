@@ -29,8 +29,17 @@ def build_tool_call_record(
     duration_ms: float = 0.0,
     round: int = 1,
     args: dict[str, Any] | None = None,
+    source: str | None = None,
 ) -> ToolCallRecord:
-    """Build a :class:`ToolCallRecord` for the tracer."""
+    """Build a :class:`ToolCallRecord` for the tracer.
+
+    Parameters
+    ----------
+    source:
+        Optional opaque origin label (e.g. ``"mcp://server=github (path=A)"``)
+        set by adapter packages such as ``nucleusiq-mcp``.  ``None`` for
+        plain local tools — preserves backwards compatibility.
+    """
     parsed: dict[str, Any] = {}
     if args is not None:
         parsed = dict(args)
@@ -51,6 +60,7 @@ def build_tool_call_record(
         error_type=error_type,
         duration_ms=duration_ms,
         round=round,
+        source=source,
     )
 
 

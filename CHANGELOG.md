@@ -11,6 +11,132 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+#### MCP tool adapter — `nucleusiq-mcp` **0.1.0b1** (beta)
+
+First public release of the **Model Context Protocol** tool adapter — connect any MCP-compliant server (stdio, Streamable HTTP, or legacy SSE) to a NucleusIQ Agent in **one line**:
+
+```python
+agent = Agent(
+    tools=[
+        MCPTool("npx -y @modelcontextprotocol/server-github"),     # stdio, auto-detected
+        MCPTool("https://mcp.slack.com/api", auth="xoxb-..."),    # Streamable HTTP + bearer
+        MCPTool(github_oauth_url, auth=OAuthAuth(...)),            # OAuth 2.1 + PKCE
+        my_custom_calculator_tool,                                 # existing BaseTool still works
+    ],
+)
+```
+
+Layout: `src/providers/tools/mcp/`, import **`nucleusiq_mcp`**, PyPI **`nucleusiq-mcp`**. Requires **`nucleusiq>=0.7.11`** and **`mcp>=1.27,<2`** (official Python SDK). Install convenience: **`pip install "nucleusiq[mcp]"`**.
+
+**Maturity — why Beta, not Alpha:**
+
+- Feature-complete for the published scope (Phases 0-3 in [MCP_INTEGRATION_DESIGN.md](docs/design/MCP_INTEGRATION_DESIGN.md)).
+- **98.68% line coverage** across 11 modules; **235 unit tests** (mocked SDK) + **13 live integration tests** (10 transport tests against the official `@modelcontextprotocol/server-everything` reference server + 3 end-to-end Anthropic Claude tests proving the full Agent → MCPTool → real MCP server → tracer loop).
+- Ruff 0.15.14 + Pyrefly 1.0 (GA) clean.
+- All bugs found during 3 review passes (rc3/rc5/rc6) have been fixed with regression tests.
+- Public API (`MCPTool`, `MCPSession`, `MCPBoundTool`, `MCPServerConfig`, `MCPAuth` family, `MCPError` hierarchy) is considered stable; only Phase 4 additions and feedback-driven tweaks are expected before 1.0.
+
+**Public API (`from nucleusiq_mcp import ...`):**
+
+- **`MCPTool(target, *, name=…, auth=…, transport=…, include_tools=…, exclude_tools=…, tool_filter=…, rename=…, prefix=…, on_collision=…, on_connect_failure=…, health_check=…)`** — user-facing factory. Implements the new `nucleusiq.tools.ExpandableTool` protocol so the Agent expands it into one or more `MCPBoundTool` instances during `initialize()`.
+- **`MCPSession`** — `AsyncExitStack`-managed lifecycle wrapper around the SDK's `ClientSession`. `_state_lock` makes `connect()`/`disconnect()` idempotent; `_call_lock` serialises RPCs against a single SDK session (the SDK is not safe for concurrent calls). Usable directly (`async with MCPSession(cfg) as s:`) for read-only / discovery flows.
+- **`MCPBoundTool`** — `BaseTool` subclass that adapts one remote MCP tool. `execute` translates `BaseTool` ↔ `MCPSession.call_tool`, raises `MCPToolError` on `isError=True`, sets `source = "mcp://server=<name> (path=A)"` so the tracer can attribute calls.
+- **`MCPServerConfig` + `MCPTransport`** — typed config with auto-detect: HTTP/HTTPS → `STREAMABLE_HTTP`; anything else → `STDIO`. Override with `transport=MCPTransport.SSE` for the legacy SSE endpoint shape.
+- **Auth** — `BearerAuth`, `EnvAuth("MY_TOKEN")`, `OAuthAuth(...)` (wraps the SDK's `OAuthClientProvider` with PKCE + dynamic client registration), `CustomHeadersAuth({...})`. String auth shorthand auto-coerces to `BearerAuth`; dict auth shorthand auto-coerces to `CustomHeadersAuth`. All auth classes use `__slots__` + redact secrets from `__repr__`.
+- **Decorator API** — `@mcp_tool_filter(name="...", description="...")` for declarative tool filters (metadata surfaced as `filter_name` / `filter_description`); `MCPToolset.all_of(...) / .any_of(...)` composes filters.
+- **Errors** — `MCPError` → `MCPConnectionError` / `MCPAuthError` / `MCPTimeoutError` / `MCPProtocolError` / `MCPToolError(ToolExecutionError)`. `MCPToolError` is a `ToolExecutionError` subclass so existing agent error-handling Just Works™.
+
+**Phase 2 production hardening (added in this release):**
+
+- **`on_connect_failure="raise" | "skip"`** — `"skip"` lets a multi-server agent survive an unreachable server (logs a warning, returns `[]` from `expand()`, tears down the half-open session). Default stays `"raise"` (fail-fast).
+- **`health_check=True` (default)** — `connect()` issues a single `list_tools` round-trip after the protocol handshake so transport-opens that won't actually speak MCP (wrong URL, wrong content-type, proxy stripping headers, expired token) fail fast. Set `False` for fastest possible startup when you trust the transport.
+- **`MCPTool.ping()`** — public health-check returning `bool`; never raises. Useful for liveness probes and dashboards.
+
+**Observability:**
+
+- Every MCP-backed tool call lands in `AgentResult.tool_calls` with `source='mcp://server=<name> (path=A)'`. Downstream consumers (telemetry, billing, audit, dashboards) can filter on the `mcp://` prefix to count MCP usage. Path label (`A`) distinguishes the client-side adapter path from the future provider-hosted path (`B`).
+
+**Tests + coverage:**
+
+| Suite | Count | Notes |
+|-------|-------|-------|
+| Unit (`tests/unit/`) | **235** | Mocked SDK via `FakeMCPSession`; covers auth, config, session lifecycle, schema adapter, bound-tool execution, MCPTool facade (construction, filtering, rename, collision policy, graceful degradation, health checks, ping), retry policy, decorators, error hierarchy. |
+| Live integration (`tests/integration/`, `-m integration`) | **13** | 10 transport tests against `@modelcontextprotocol/server-everything` (stdio, Streamable HTTP, SSE × {session lifecycle, call_tool, facade}); 3 end-to-end tests with `nucleusiq-anthropic` Claude Haiku 4.5 proving the full agent loop, source-label propagation, and tool selection. |
+| Coverage | **98.68%** | Per-module: auth/bound_tool/decorators/exceptions/models/retry/schema_adapter 100%; config 96%; mcp_tool 96%; session 99%. |
+
+**Examples (`src/providers/tools/mcp/examples/`):**
+
+- `01_basic_stdio.py` — stdio one-liner against the reference server.
+- `02_http_with_auth.py` — Streamable HTTP + `BearerAuth` / `EnvAuth` / `CustomHeadersAuth`.
+- `03_oauth_flow.py` — full `OAuthAuth` (PKCE, dynamic client registration).
+- `04_multi_server.py` — multiple servers + name-collision policies.
+- `05_filter_and_rename.py` — `include_tools` / `exclude_tools` / `rename` / `prefix`.
+- `06_error_handling.py` — `MCPConnectionError` / `MCPToolError` / `on_connect_failure="skip"`.
+- `07_decorator_filters.py` — `@mcp_tool_filter`, `MCPToolset.all_of` / `.any_of`.
+- `08_full_agent_with_llm.py` — end-to-end Agent + LLM + MCP server.
+
+**Documentation:**
+
+- `notebooks/agents/mcp_tools_showcase.ipynb` — executable end-to-end walkthrough: discovery → real Claude tool call → graceful degradation → transport auto-detection. Notebook runs the reference server in Streamable HTTP mode so it's portable across macOS, Linux, and Windows + IPython (anyio + IPython's wrapped stdin can't open stdio subprocesses; CLI/script use is unaffected).
+- `src/providers/tools/mcp/README.md` + `examples/README.md` — install, quick-start, transport matrix, auth matrix.
+- `docs/design/MCP_INTEGRATION_DESIGN.md` — v0.8.0-rc6: full architecture, SOLID rationale, comparison with LangChain `langchain-mcp-adapters` and CrewAI's `MCPServerAdapter`, security threat model, Phase 4 roadmap, live implementation-status checklist.
+
+**Bugs found & fixed during 3 review passes (regression tests for each):**
+
+1. **Orphan-task leak** in `Agent.initialize()` — `asyncio.gather` (default) propagated the first connect failure while leaving sibling tasks unattended. Fixed with `return_exceptions=True` + explicit re-raise. (`test_initialize_parallel_failure_no_orphans`)
+2. **Cleanup skipped on `BaseException`** — outer `except Exception` silently let `KeyboardInterrupt` / `CancelledError` bypass `_cleanup_expandable_tools()`. Widened to `except BaseException` with an inner guard.
+3. **`ToolCallRecord.source` defined but never populated** — added the wiring (`build_tool_call_record(..., source=...)` + `base_mode.call_tool` look-up + `MCPBoundTool.source` attribute) so MCP tool calls actually show up labelled in telemetry.
+4. **`on_connect_failure="skip"` silently bypassed for HTTP / SSE** — the MCP SDK uses `anyio.create_task_group()` internally; when a sub-task fails (e.g. `httpx.ConnectError`), the group re-raises it as `asyncio.CancelledError` — a `BaseException`. Previous `except Exception` clause didn't catch it, so the skip policy worked for stdio but not HTTP. Widened to `except BaseException` (carving out `KeyboardInterrupt`/`SystemExit`). (`test_skip_catches_cancelled_error`, `test_skip_does_not_swallow_keyboard_interrupt`)
+5. **`OAuthAuth` docstring referenced a non-existent `with_defaults` helper** — replaced with a real wiring example using `OAuthClientProvider`.
+6. **`session._dump` return-type unsoundness** — surfaced by Pyrefly 1.0 GA. `model_dump()` is typed `Any`, so returning it from a function annotated `-> dict[str, Any] | None` was unsound. Now narrows with `isinstance(..., dict)`.
+7. **`anyio` listed as a direct dep but never imported** — removed. It's a transitive dep of the `mcp` SDK; we use stdlib `asyncio` everywhere (`AsyncExitStack`, `Lock`, `gather`, `wait_for`). Smaller dep graph, clearer intent.
+
+**Stability commitments (Beta → 1.0):**
+
+- **Public API will not break** without a deprecation window: `MCPTool`, `MCPSession`, `MCPBoundTool`, `MCPServerConfig`, `MCPTransport`, the four `*Auth` classes, the `MCPError` hierarchy.
+- **`mcp` SDK pin (`>=1.27,<2`)** will be widened on a 2.x major bump only after we verify the new surface.
+- **`ToolCallRecord.source` format** (`mcp://server=<name> (path=<A|B>)`) is stable; the `path` segment will grow values (`B` for provider-hosted MCP) but `A` will not change semantics.
+- Phase 4 additions (Tool approvals, Progress, MCP Prompts, MCP Resources, Sampling, Elicitation, Resumability, stdio auto-respawn) are purely additive — no breaking changes expected.
+
+**Limitations / known issues (deferred to Phase 4):**
+
+- No MCP **Prompts** support yet — the SDK supports it but we surface only Tools today.
+- No MCP **Resources** support yet.
+- No **tool-approval policy** (`ask | always_allow | always_deny | callback`).
+- No **progress notification** forwarding (long-running tools still complete, but mid-execution progress is dropped).
+- No **streaming** tool results (each `call_tool` is request/response).
+- No **stdio auto-respawn** on crash — caller must reconnect manually.
+- **Windows + IPython kernel** — anyio's `open_process` cannot reach into the kernel's wrapped stdin, so MCP stdio servers don't open from IPython notebooks. Use Streamable HTTP mode in notebooks on Windows; stdio works fine in CLI scripts on every platform.
+
+#### Core — `nucleusiq` **0.7.11** (patch)
+
+A small, additive patch release that unlocks the MCP adapter. **No breaking changes**: existing agents and tools work exactly as before — `ExpandableTool` is opt-in, `ToolCallRecord.source` is `None` by default, and the `Agent.initialize` parallel-connect path is only exercised when at least one `ExpandableTool` is on the agent.
+
+**New public surface:**
+
+- **`nucleusiq.tools.protocols.ExpandableTool`** — `@runtime_checkable` Protocol defining `connect()` / `expand(existing_names: set[str]) -> list[BaseTool]` / `disconnect()`. Re-exported as `from nucleusiq.tools import ExpandableTool`. Tool factories (MCP adapters, future LangChain/CrewAI bridges, agent-as-tool wrappers) implement this contract; the core knows nothing MCP-specific.
+- **`ToolCallRecord.source: str | None`** — optional opaque origin label on every tool call recorded in `AgentResult.tool_calls`. The framework reads `getattr(tool, "source", None)` automatically — no tool needs to import anything; just expose an attribute. (`source` field is `None` for hand-written `BaseTool`s — no behaviour change for existing code.)
+- **`nucleusiq[mcp]`** extras — installs `nucleusiq-mcp>=0.1.0b1`. Lets users write `pip install "nucleusiq[mcp]"` instead of remembering the separate package name.
+
+**Internal robustness:**
+
+- **`Agent.initialize()`** — Phase A (split direct tools vs `ExpandableTool` adapters) / Phase B (parallel `connect()` via `asyncio.gather(return_exceptions=True)`) / Phase C (sequential `expand()` with collision detection) / Phase D (per-tool `initialize()`). The `return_exceptions=True` change prevents orphaned in-flight `connect()` tasks when a sibling adapter fails fast — verified by `test_initialize_parallel_failure_no_orphans`.
+- **Rollback path catches `BaseException`** — so `_cleanup_expandable_tools()` still runs on `KeyboardInterrupt` / `asyncio.CancelledError`. Avoids leaking stdio subprocesses or OAuth-locked HTTP sessions on abnormal termination.
+- **`_cleanup_expandable_tools()`** — parallel `disconnect()` via `asyncio.gather(return_exceptions=True)`. Runs from both the init-failure rollback and `Agent.__aexit__`.
+- **`base_mode.call_tool`** — reads `getattr(tool, "source", None)` and forwards it to `build_tool_call_record(..., source=...)`. Generic — no MCP-specific code in core.
+- **`build_tool_call_record`** — new `source: str | None = None` parameter.
+
+**Tooling:**
+
+- Bumped dev lint pins: **ruff ≥ 0.15.14** (was `≥ 0.4`), **pyrefly ≥ 1.0** (was `≥ 0.59`; Meta's type-checker reached GA on 2026-05-12, switching from "Beta" PyPI classifier to "Production/Stable").
+- Core test suite: **1323 passed, 2 skipped** (no regressions from the patch).
+
+**Tests added:**
+
+- `tests/tools/unit/test_expandable_tool_protocol.py` — 20 tests covering the Protocol, parallel-connect ordering, partial-failure rollback, collision detection.
+- `tests/agents/unit/test_agent_tracer_integration.py` — Agent + tracer + source-field integration test (3 tests).
+- `tests/unit/test_execution_tracer.py` — `build_tool_call_record` accepts `source` (existing file extended).
+
 #### Anthropic provider — `nucleusiq-anthropic` **0.1.0a1** (alpha)
 
 Installable Claude provider (**Messages API**) at `src/providers/llms/anthropic`, import **`nucleusiq_anthropic`**, PyPI **`nucleusiq-anthropic`**. Requires **`nucleusiq>=0.7.10`**, **`anthropic>=0.40,<1`**.

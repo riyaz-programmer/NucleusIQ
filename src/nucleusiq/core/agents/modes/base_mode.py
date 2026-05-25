@@ -501,6 +501,19 @@ class BaseExecutionMode(ABC):
         except (json.JSONDecodeError, TypeError):
             pass
 
+        # Resolve any optional ``source`` label the tool advertises
+        # (e.g. ``"mcp://server=github (path=A)"`` from MCPBoundTool).
+        # We look up by name once and read the attribute defensively so
+        # non-MCP tools simply yield ``None``.
+        tool_source: str | None = None
+        if tc.name:
+            for _t in agent.tools or []:
+                if getattr(_t, "name", None) == tc.name:
+                    src = getattr(_t, "source", None)
+                    if isinstance(src, str):
+                        tool_source = src
+                    break
+
         t0 = time.perf_counter()
         try:
             if pm is None or not pm.has_plugins():
@@ -527,6 +540,7 @@ class BaseExecutionMode(ABC):
                         duration_ms=duration_ms,
                         round=tool_round,
                         args=tool_args,
+                        source=tool_source,
                     )
                 )
             return result
@@ -544,6 +558,7 @@ class BaseExecutionMode(ABC):
                         duration_ms=duration_ms,
                         round=tool_round,
                         args=tool_args,
+                        source=tool_source,
                     )
                 )
             raise

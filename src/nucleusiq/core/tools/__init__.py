@@ -16,11 +16,13 @@ from nucleusiq.tools.errors import (
     ToolTimeoutError,
     ToolValidationError,
 )
+from nucleusiq.tools.protocols import ExpandableTool
 
 __all__ = [
     "BaseTool",
     "DecoratedTool",
     "DirectoryListTool",
+    "ExpandableTool",
     "FileExtractTool",
     "FileReadTool",
     "FileSearchTool",

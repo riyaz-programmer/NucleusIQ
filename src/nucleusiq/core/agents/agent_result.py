@@ -97,6 +97,13 @@ class ToolCallRecord(BaseModel):
     error_type: str | None = None
     duration_ms: float = 0.0
     round: int = 1
+    # Optional opaque source identifier set by adapter packages.
+    # Examples: ``"mcp://server=github (path=A)"`` for client-side MCP via
+    # nucleusiq-mcp, ``"mcp://server_label=calendar (path=B)"`` for
+    # provider-hosted MCP via OpenAITool.mcp.  ``None`` for local tools.
+    # Consumers can filter / group by this field; legacy tools and tracers
+    # continue to work with ``source=None`` (backwards compatible).
+    source: str | None = None
 
 
 class LLMCallRecord(BaseModel):

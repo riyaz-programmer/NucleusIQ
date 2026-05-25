@@ -125,6 +125,18 @@ def test_build_tool_call_record_parses_args():
     rec = build_tool_call_record(tc, success=True, duration_ms=1.0, round=3)
     assert rec.args == {"k": "v"}
     assert rec.round == 3
+    assert rec.source is None  # backwards-compatible default
+
+
+def test_build_tool_call_record_accepts_source():
+    tc = ToolCallRequest(id="x", name="t", arguments="{}")
+    rec = build_tool_call_record(
+        tc,
+        success=True,
+        duration_ms=1.0,
+        source="mcp://server=github (path=A)",
+    )
+    assert rec.source == "mcp://server=github (path=A)"
 
 
 def test_default_tracer_and_reset():

@@ -33,6 +33,8 @@ jupyter notebook notebooks/devils_advocate_showcase.ipynb
 | Path | Role |
 |------|------|
 | `notebooks/devils_advocate_showcase.ipynb` | Guided walkthrough |
+| `notebooks/nucleusiq-devils-advocate-newsletter-cover.png` | Newsletter / LinkedIn cover |
+| `notebooks/NEWSLETTER.md` | LinkedIn copy (title + opening) |
 | `committee/showcase_agent.py` | Agent factory (preload + chat) |
 | `committee/pack_tools.py` | `@tool` pack readers |
 | `committee/pack_builder.py` | Phase A pack builder |

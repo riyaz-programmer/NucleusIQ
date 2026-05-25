@@ -301,6 +301,101 @@ jobs:
           name: coverage-ollama
           path: src/providers/inference/ollama/coverage.xml
 
+  # ── MCP tool adapter tests ─────────────────────────────────────────
+  test-mcp:
+    name: "MCP (Python ${{ matrix.python-version }})"
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.12"]
+    defaults:
+      run:
+        working-directory: src/providers/tools/mcp
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Cache pip
+        uses: actions/cache@v5
+        with:
+          path: ~/.cache/pip
+          key: pip-mcp-${{ matrix.python-version }}-${{ hashFiles('src/providers/tools/mcp/pyproject.toml') }}
+          restore-keys: pip-mcp-${{ matrix.python-version }}-
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ../../../nucleusiq
+          pip install -e "."
+          pip install pytest pytest-asyncio pytest-cov pytest-mock
+
+      - name: Run unit tests with coverage
+        # Skip ``-m integration`` here — those need Node.js + npx and the
+        # reference server; they run in the dedicated test-mcp-integration
+        # job below on push to main only.
+        run: |
+          python -m pytest tests/unit -q --tb=short \
+            --override-ini="addopts=" \
+            -m "not integration" \
+            --cov=nucleusiq_mcp --cov-report=xml:coverage.xml \
+            --cov-fail-under=90
+
+      - name: Upload coverage
+        if: matrix.python-version == '3.12'
+        uses: actions/upload-artifact@v7
+        with:
+          name: coverage-mcp
+          path: src/providers/tools/mcp/coverage.xml
+
+  # ── MCP live integration tests (Node.js + reference server) ──────────
+  test-mcp-integration:
+    name: "MCP integration (live server)"
+    runs-on: ubuntu-latest
+    # Only run on pushes to main + manual dispatch — npx-driven; ~30s wall
+    # time + slightly flakier than pure unit tests.  Don't gate every PR.
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+    defaults:
+      run:
+        working-directory: src/providers/tools/mcp
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Set up Node.js 22
+        uses: actions/setup-node@v6
+        with:
+          node-version: "22"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ../../../nucleusiq
+          pip install -e "."
+          pip install -e ../../llms/anthropic
+          pip install pytest pytest-asyncio pytest-mock python-dotenv
+
+      - name: Run live integration tests
+        # ``test_with_anthropic.py`` auto-skips if ANTHROPIC_API_KEY is
+        # unset — transport tests still run against the local reference
+        # server.  Configure ANTHROPIC_API_KEY as a repo / environment
+        # secret to exercise the Claude end-to-end path.
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          python -m pytest tests/integration -m integration -v \
+            --override-ini="addopts="
+
   # ── uv install verification ────────────────────────────────────────
   test-uv:
     name: "uv install check"
@@ -353,6 +448,13 @@ jobs:
           uv sync --group dev
           uv run pytest tests/ -q --tb=short -x
 
+      - name: MCP — uv sync + unit tests
+        working-directory: src/providers/tools/mcp
+        run: |
+          uv venv
+          uv sync --group dev
+          uv run pytest tests/unit -q --tb=short -x -m "not integration" --override-ini="addopts="
+
   # ── Lint ────────────────────────────────────────────────────────────
   lint:
     name: Lint
@@ -397,6 +499,7 @@ jobs:
           pip install -e src/providers/llms/anthropic --config-settings editable_mode=strict
           pip install -e src/providers/inference/groq --config-settings editable_mode=strict
           pip install -e src/providers/inference/ollama --config-settings editable_mode=strict
+          pip install -e src/providers/tools/mcp --config-settings editable_mode=strict
 
       - name: "Pyrefly: Core"
         working-directory: src/nucleusiq
@@ -422,6 +525,10 @@ jobs:
         working-directory: src/providers/inference/ollama
         run: pyrefly check --output-format=github
 
+      - name: "Pyrefly: MCP tool adapter"
+        working-directory: src/providers/tools/mcp
+        run: pyrefly check --output-format=github
+
   # ── Import check — verify all public exports work ──────────────────
   import-check:
     name: Import check
@@ -445,6 +552,7 @@ jobs:
           pip install -e src/providers/llms/anthropic
           pip install -e src/providers/inference/groq
           pip install -e src/providers/inference/ollama
+          pip install -e src/providers/tools/mcp
 
       - name: Verify core imports
         run: |
@@ -515,6 +623,23 @@ jobs:
           print('All Ollama imports OK')
           "
 
+      - name: Verify MCP tool adapter imports
+        run: |
+          python -c "
+          from nucleusiq_mcp import (
+              MCPTool,
+              MCPBoundTool,
+              MCPSession,
+              MCPServerConfig,
+              MCPSchemaAdapter,
+              BearerAuth,
+              OAuthAuth,
+              EnvAuth,
+              mcp_tool_filter,
+          )
+          print('All MCP tool adapter imports OK')
+          "
+
   # ── Security — check for vulnerabilities ────────────────────────────
   security:
     name: Security scan
@@ -530,14 +655,14 @@ jobs:
       - name: Check dependencies for vulnerabilities
         run: |
           pip install pip-audit
-          pip install -e src/nucleusiq -e src/providers/llms/openai -e src/providers/llms/gemini -e src/providers/llms/anthropic -e src/providers/inference/groq -e src/providers/inference/ollama
+          pip install -e src/nucleusiq -e src/providers/llms/openai -e src/providers/llms/gemini -e src/providers/llms/anthropic -e src/providers/inference/groq -e src/providers/inference/ollama -e src/providers/tools/mcp
           pip-audit || true
 
   # ── Build verification ──────────────────────────────────────────────
   build:
     name: "Build ${{ matrix.package }}"
     runs-on: ubuntu-latest
-    needs: [test-core, test-openai, test-gemini, test-anthropic, test-groq, test-ollama, lint, type-check, import-check]
+    needs: [test-core, test-openai, test-gemini, test-anthropic, test-groq, test-ollama, test-mcp, lint, type-check, import-check]
     strategy:
       matrix:
         include:
@@ -553,6 +678,8 @@ jobs:
             path: src/providers/inference/groq
           - package: nucleusiq-ollama
             path: src/providers/inference/ollama
+          - package: nucleusiq-mcp
+            path: src/providers/tools/mcp
 
     steps:
       - uses: actions/checkout@v6

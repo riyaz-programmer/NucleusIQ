@@ -10,6 +10,7 @@ via a pluggable registry.  All heavy logic lives in:
 - ``messaging/``   — LLM message construction
 """
 
+import asyncio
 import inspect
 import time
 from collections.abc import AsyncGenerator
@@ -135,13 +136,33 @@ class Agent(BaseAgent):
     _tool_dedup_cache: dict[tuple[str, str], str] = PrivateAttr(default_factory=dict)
     _execution_progress: Any = PrivateAttr(default=None)
     _sub_agent_context_tels: list = PrivateAttr(default_factory=list)
+    # ExpandableTool adapters (e.g., MCPTool from nucleusiq-mcp) kept for
+    # cleanup at shutdown.  See ``initialize()`` / ``_cleanup_expandable_tools``.
+    _expandable_tools: list = PrivateAttr(default_factory=list)
 
     # ------------------------------------------------------------------ #
     # LIFECYCLE                                                           #
     # ------------------------------------------------------------------ #
 
     async def initialize(self) -> None:
-        """Initialize agent components and resources."""
+        """Initialize agent components and resources.
+
+        Tool expansion (ExpandableTool protocol):
+            Any item in ``self.tools`` that satisfies
+            :class:`nucleusiq.tools.protocols.ExpandableTool` is treated
+            as a *factory* — its ``connect()`` is called (in parallel
+            with other adapters via ``asyncio.gather``), then
+            ``expand(existing_names=...)`` returns the concrete
+            :class:`BaseTool` instances that replace the factory in
+            ``self.tools``.  See ``MCP_INTEGRATION_DESIGN.md`` §9.1 / §10.
+
+            The original factory objects are retained in
+            ``self._expandable_tools`` so that
+            :meth:`_cleanup_expandable_tools` can disconnect them at
+            shutdown.
+        """
+        from nucleusiq.tools.protocols import ExpandableTool
+
         self._logger.info(f"Initializing agent: {self.name}")
 
         try:
@@ -152,6 +173,66 @@ class Agent(BaseAgent):
                     "Plugin manager initialized with %d plugins",
                     len(self.plugins),
                 )
+
+            # Phase A: Identify ExpandableTool adapters vs concrete tools.
+            adapters: list[Any] = [
+                t for t in self.tools if isinstance(t, ExpandableTool)
+            ]
+            direct: list[Any] = [
+                t for t in self.tools if not isinstance(t, ExpandableTool)
+            ]
+            self._expandable_tools = adapters
+
+            # Phase B: Connect all adapters in parallel.  This is the
+            # major latency win when users add multiple MCP / A2A
+            # servers — N × RTT becomes max(RTT).
+            #
+            # We use ``return_exceptions=True`` so that one failing
+            # adapter cannot orphan in-flight ``connect()`` calls from
+            # peers (default ``gather`` would propagate the first error
+            # while leaving siblings running unattended — subprocesses,
+            # HTTP connections — until they eventually fail and dangle).
+            # On any failure we raise the first exception here so the
+            # outer ``except`` block runs ``_cleanup_expandable_tools``,
+            # which disconnects every adapter (successful or not — the
+            # adapter's own ``disconnect`` is idempotent on
+            # already-disconnected state).
+            if adapters:
+                self._logger.debug(
+                    "Connecting %d expandable tool adapter(s) in parallel",
+                    len(adapters),
+                )
+                results = await asyncio.gather(
+                    *(a.connect() for a in adapters),
+                    return_exceptions=True,
+                )
+                for adapter, res in zip(adapters, results, strict=True):
+                    if isinstance(res, BaseException):
+                        self._logger.error(
+                            "ExpandableTool adapter %r failed to connect: %s",
+                            adapter, res,
+                        )
+                        raise res
+
+            # Phase C: Expand each adapter into concrete BaseTool instances.
+            # ``existing_names`` lets adapters detect / prefix collisions
+            # consistently across the whole agent's tool registry.
+            existing_names: set[str] = set()
+            for t in direct:
+                n = getattr(t, "name", None)
+                if isinstance(n, str):
+                    existing_names.add(n)
+            expanded_tools: list[Any] = list(direct)
+            for adapter in adapters:
+                bound = await adapter.expand(existing_names=existing_names)
+                for t in bound:
+                    if getattr(t, "name", None) is not None:
+                        existing_names.add(t.name)
+                expanded_tools.extend(bound)
+
+            # Replace ``self.tools`` with the expanded list so executors,
+            # plugins, tracer, and ContextEngine all see real BaseTools.
+            self.tools = expanded_tools
 
             # Initialize Executor component (always needed for tool execution)
             if self.llm:
@@ -171,7 +252,8 @@ class Agent(BaseAgent):
                 prompt_text = self.prompt.format_prompt()
                 self._logger.debug(f"Prompt system initialized \n {prompt_text}")
 
-            # Initialize tools
+            # Initialize tools (expanded MCPBoundTool.initialize is a no-op
+            # since the session is already connected via the adapter).
             for tool in self.tools:
                 await tool.initialize()
             if self.tools:
@@ -181,10 +263,45 @@ class Agent(BaseAgent):
             self.state = AgentState.INITIALIZING
             self._logger.info("Agent initialization completed successfully")
 
-        except Exception as e:
+        except BaseException as e:
             self.state = AgentState.ERROR
-            self._logger.error(f"Agent initialization failed: {str(e)}")
+            self._logger.error(f"Agent initialization failed: {e!s}")
+            # Best-effort cleanup of any adapters that connected before
+            # the failure so we don't leak subprocesses / sessions.
+            # We catch BaseException (not just Exception) so that
+            # KeyboardInterrupt / CancelledError still triggers cleanup.
+            try:
+                await self._cleanup_expandable_tools()
+            except BaseException:  # noqa: BLE001 — cleanup must never mask original
+                self._logger.exception("Adapter cleanup failed during initialize rollback")
             raise
+
+    async def _cleanup_expandable_tools(self) -> None:
+        """Disconnect all :class:`ExpandableTool` adapters in parallel.
+
+        Best-effort: uses ``return_exceptions=True`` so one failing
+        adapter does not block the others' shutdown.  Idempotent —
+        adapters' ``disconnect()`` must tolerate being called on an
+        already-disconnected session.
+
+        Called from :meth:`initialize` on failure (to roll back partial
+        state) and from the agent's shutdown / ``__aexit__`` path.
+        """
+        adapters = getattr(self, "_expandable_tools", None) or []
+        if not adapters:
+            return
+        results = await asyncio.gather(
+            *(a.disconnect() for a in adapters),
+            return_exceptions=True,
+        )
+        for adapter, res in zip(adapters, results, strict=True):
+            if isinstance(res, Exception):
+                self._logger.warning(
+                    "ExpandableTool adapter disconnect failed: %r", adapter,
+                    exc_info=res,
+                )
+        # Clear the list so a subsequent initialize starts clean.
+        self._expandable_tools = []
 
     # ------------------------------------------------------------------ #
     # PLAN CREATION (simple default)                                      #
