@@ -74,12 +74,25 @@ def test_server_tool_passthrough() -> None:
     assert to_anthropic_tool_definition(spec) == spec
 
 
-def test_spec_looks_native_empty_registry_expectations() -> None:
-    """``NATIVE_TOOL_TYPES`` is empty in Phase A — only explicit builtins match."""
+def test_spec_looks_native_registry_membership() -> None:
+    """``NATIVE_TOOL_TYPES`` ships ``web_search``, ``web_fetch``, ``code_execution`` (0.2.0)."""
 
-    assert not spec_looks_native({"type": "web_search"})
+    # Markers are recognised when the ``name`` field matches the registry.
+    assert spec_looks_native(
+        {"type": "anthropic_builtin", "name": "web_search", "params": {}}
+    )
+    assert spec_looks_native(
+        {"type": "anthropic_builtin", "name": "code_execution", "params": {}}
+    )
+
+    # Raw dated wire identifiers Anthropic uses on the API also resolve.
+    assert spec_looks_native({"type": "web_search_20250305", "name": "web_search"})
+    assert spec_looks_native({"type": "web_fetch_20250910", "name": "web_fetch"})
+
+    # Unknown markers / non-native specs do not match.
     assert not spec_looks_native({"type": "function"})
     assert not spec_looks_native({"type": "anthropic_builtin", "name": "missing"})
+    assert not spec_looks_native({})
 
 
 def test_additional_properties_injected_when_absent() -> None:

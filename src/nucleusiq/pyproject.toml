@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "nucleusiq"
-version = "0.7.11"
+version = "0.7.12"
 description = "NucleusIQ – open-source framework for building autonomous AI agents with advanced prompt engineering, flexible execution modes, and modular architecture."
 readme = "README.md"
 requires-python = ">=3.10,<4.0"
@@ -44,7 +44,7 @@ openai = ["nucleusiq-openai"]
 # MCP tool adapter — pulls the official MCP SDK + our adapter package.
 # Lets users write ``pip install "nucleusiq[mcp]"`` instead of remembering
 # the separate ``nucleusiq-mcp`` package name.
-mcp = ["nucleusiq-mcp>=0.1.0b1"]
+mcp = ["nucleusiq-mcp>=0.1.0"]
 clustering = ["scikit-learn>=1.0"]
 # Not imported by nucleusiq itself; some notebooks/examples use HTTP via requests.
 # Use if you depended on ``requests`` transitively from older nucleusiq installs.

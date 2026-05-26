@@ -40,8 +40,93 @@ def _normalize_tool_call_entry(tc: Any) -> dict[str, Any]:
     return out
 
 
+def _split_data_url(url: str) -> str | None:
+    """Return the base64 payload from a ``data:image/...;base64,<data>`` URL.
+
+    Returns ``None`` if the URL is not a base64-encoded data URL.  Ollama's
+    chat API expects raw base64 strings (no ``data:`` prefix) in
+    ``message.images``.
+    """
+    if not isinstance(url, str) or not url.startswith("data:"):
+        return None
+    comma = url.find(",", 5)
+    if comma < 0:
+        return None
+    meta = url[5:comma].strip().lower()
+    if ";base64" not in meta:
+        return None
+    return url[comma + 1 :].strip() or None
+
+
+def _extract_text_and_images(
+    content: Any,
+) -> tuple[str | None, list[str]]:
+    """Split OpenAI-style multimodal content into (text, base64_images).
+
+    Accepts:
+
+    * ``str`` — passed through as text, no images.
+    * ``list`` of OpenAI-style parts (``{"type": "text", "text": ...}`` and
+      ``{"type": "image_url", "image_url": {"url": ...}}``) — text parts
+      are joined; image parts whose URL is a base64 data URL are decoded
+      into raw base64 strings for Ollama's ``message.images`` field.
+    * ``None`` — returns ``(None, [])``.
+
+    HTTP(S) image URLs are skipped with a warning — Ollama needs the bytes
+    inline (no implicit download).  Callers that want HTTP image support
+    should pre-encode them as data URLs (the core attachment system already
+    handles this for ``Attachment.IMAGE`` parts).
+    """
+    if content is None:
+        return None, []
+    if isinstance(content, str):
+        return content, []
+    if not isinstance(content, list):
+        return str(content), []
+
+    text_parts: list[str] = []
+    images: list[str] = []
+    for part in content:
+        if not isinstance(part, dict):
+            continue
+        pt = part.get("type")
+        if pt == "text":
+            text_val = part.get("text")
+            if isinstance(text_val, str) and text_val:
+                text_parts.append(text_val)
+        elif pt == "image_url":
+            iu = part.get("image_url")
+            url = iu.get("url", "") if isinstance(iu, dict) else str(iu or "")
+            decoded = _split_data_url(url)
+            if decoded:
+                images.append(decoded)
+            elif isinstance(url, str) and url.startswith(("http://", "https://")):
+                logger.warning(
+                    "Ollama wire: skipping HTTP image_url part (no inline "
+                    "download support); pre-encode as a data: URL instead. "
+                    "url=%s",
+                    url,
+                )
+        elif pt == "image":
+            # Raw passthrough: ``{"type": "image", "data": "<base64>"}``
+            data = part.get("data")
+            if isinstance(data, str) and data:
+                images.append(data)
+
+    joined = "\n".join(t for t in text_parts if t).strip() or None
+    return joined, images
+
+
 def sanitize_messages(messages: list[dict[str, Any]]) -> list[dict[str, Any]]:
-    """Normalise assistant ``tool_calls`` for Ollama (OpenAI-compatible tool shape)."""
+    """Normalise messages for Ollama.
+
+    * Assistant ``tool_calls`` are converted to OpenAI-compatible shape.
+    * User / system messages whose ``content`` is an OpenAI-style multimodal
+      part list are split into a plain ``content`` string plus an ``images``
+      list of base64 strings (Ollama's vision-message shape).  Multimodal
+      messages without any text parts get an empty ``content`` (some models
+      accept this; others ignore it — both behaviours are correct).
+    """
     out: list[dict[str, Any]] = []
     for msg in messages:
         m = copy.deepcopy(msg)
@@ -49,6 +134,20 @@ def sanitize_messages(messages: list[dict[str, Any]]) -> list[dict[str, Any]]:
             raw_tcs = m["tool_calls"]
             if isinstance(raw_tcs, list):
                 m["tool_calls"] = [_normalize_tool_call_entry(tc) for tc in raw_tcs]
+
+        role = m.get("role")
+        if role in ("user", "system"):
+            text, images = _extract_text_and_images(m.get("content"))
+            if images or isinstance(m.get("content"), list):
+                m["content"] = text or ""
+                if images:
+                    # Merge with any existing ``images`` already on the
+                    # message (callers may pass them directly).
+                    existing = m.get("images") or []
+                    if isinstance(existing, list):
+                        m["images"] = list(existing) + images
+                    else:
+                        m["images"] = images
         out.append(m)
     return out
 

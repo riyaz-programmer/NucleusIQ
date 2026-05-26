@@ -65,6 +65,23 @@ class _Choice(BaseModel):
     message: AssistantMessage
 
 
+class ServerToolCall(BaseModel):
+    """A native (server-executed) Gemini tool call.
+
+    Gemini hosts ``google_search`` (Search Grounding) and ``code_execution``
+    server-side.  When the model invokes them, evidence appears in the
+    response candidates (grounding metadata, executable code + execution
+    result parts).  This model surfaces them in the framework-standard
+    shape so the core agent loop can emit
+    ``ToolCallRecord(executed_by="provider")``.
+    """
+
+    id: str
+    name: str
+    input: dict[str, Any] = Field(default_factory=dict)
+    result: Any = None
+
+
 class GeminiLLMResponse(BaseModel):
     """Normalised response from the Gemini API."""
 
@@ -72,3 +89,4 @@ class GeminiLLMResponse(BaseModel):
     usage: UsageInfo | None = None
     response_id: str | None = None
     model: str | None = None
+    server_tool_calls: list[ServerToolCall] = Field(default_factory=list)

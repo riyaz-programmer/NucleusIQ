@@ -200,6 +200,17 @@ def rollup_sub_agent_metrics(agent: Agent, sub_results: list) -> None:
                     tool_call_count=lc.tool_call_count,
                     duration_ms=lc.duration_ms,
                     prompt_technique=lc.prompt_technique,
+                    # v0.7.12 — forward provider-side observability so
+                    # sub-agent enrichment survives the re-record path.
+                    provider=getattr(lc, "provider", None),
+                    request_id=getattr(lc, "request_id", None),
+                    organization_id=getattr(lc, "organization_id", None),
+                    stop_reason=getattr(lc, "stop_reason", None),
+                    cache_read_input_tokens=getattr(lc, "cache_read_input_tokens", 0),
+                    cache_creation_input_tokens=getattr(
+                        lc, "cache_creation_input_tokens", 0
+                    ),
+                    metadata=dict(getattr(lc, "metadata", {}) or {}),
                 )
             )
         for tc in getattr(sub, "tool_calls", ()):

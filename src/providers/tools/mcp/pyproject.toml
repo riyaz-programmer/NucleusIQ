@@ -4,14 +4,14 @@ build-backend = "hatchling.build"
 
 [project]
 name = "nucleusiq-mcp"
-version = "0.1.0b1"
+version = "0.1.0"
 description = "Model Context Protocol (MCP) tool adapter for the NucleusIQ AI agent framework. Connect any MCP server (stdio, Streamable HTTP, SSE) as a NucleusIQ BaseTool."
 requires-python = ">=3.10,<4.0"
 license = { text = "MIT" }
 authors = [{ name = "Nucleusbox", email = "info@nucleusbox.com" }]
 keywords = ["AI", "agents", "mcp", "model-context-protocol", "tools", "nucleusiq"]
 classifiers = [
-    "Development Status :: 4 - Beta",
+    "Development Status :: 5 - Production/Stable",
     "Intended Audience :: Developers",
     "License :: OSI Approved :: MIT License",
     "Programming Language :: Python :: 3",
@@ -24,10 +24,12 @@ classifiers = [
 ]
 
 dependencies = [
-    # Core framework. We currently rely on 0.7.11 for the ExpandableTool
-    # protocol, ToolCallRecord.source plumbing, and parallel-connect bug
-    # fix shipped alongside this package.
-    "nucleusiq>=0.7.11",
+    # Core framework. We require 0.7.12 for the cross-cutting native-tool
+    # observability scaffolding (ToolCallRecord.executed_by, LLMCallRecord
+    # enrichment) shipped alongside the v0.7.12 release line, on top of the
+    # ExpandableTool protocol / ToolCallRecord.source plumbing that landed
+    # in 0.7.11.
+    "nucleusiq>=0.7.12",
     # Official MCP Python SDK.  Pin to 1.27 for the stable transports +
     # OAuth provider surface; <2 to allow patch upgrades but require an
     # explicit bump on a 2.x major.

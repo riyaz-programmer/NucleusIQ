@@ -4,14 +4,14 @@ build-backend = "hatchling.build"
 
 [project]
 name = "nucleusiq-anthropic"
-version = "0.1.0a1"
-description = "Anthropic Claude provider for the NucleusIQ AI agent framework (Messages API, tools, streaming)."
+version = "0.2.0"
+description = "Anthropic Claude provider for the NucleusIQ AI agent framework (Messages API, native tools, prompt caching, extended thinking, streaming)."
 requires-python = ">=3.10,<4.0"
 license = { text = "MIT" }
 authors = [{ name = "Nucleusbox", email = "info@nucleusbox.com" }]
 keywords = ["AI", "agents", "anthropic", "claude", "nucleusiq"]
 classifiers = [
-    "Development Status :: 3 - Alpha",
+    "Development Status :: 5 - Production/Stable",
     "Intended Audience :: Developers",
     "License :: OSI Approved :: MIT License",
     "Programming Language :: Python :: 3",
@@ -24,7 +24,7 @@ classifiers = [
 ]
 
 dependencies = [
-    "nucleusiq>=0.7.10",
+    "nucleusiq>=0.7.12",
     "anthropic>=0.40,<1",
 ]
 

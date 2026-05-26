@@ -11,6 +11,7 @@ from anthropic import NOT_GIVEN
 from nucleusiq_anthropic._shared.response_models import (
     AnthropicLLMResponse,
     AssistantMessage,
+    ServerToolCall,
     ToolCall,
     ToolCallFunction,
     UsageInfo,
@@ -21,7 +22,12 @@ from nucleusiq_anthropic._shared.wire import (
     anthropic_tool_choice,
     drop_unsupported_sampling,
     flatten_tools,
+    system_with_cache,
     translate_messages,
+)
+from nucleusiq_anthropic.tools.anthropic_tool import (
+    NATIVE_TOOL_TYPES,
+    required_beta_headers,
 )
 
 logger = logging.getLogger(__name__)
@@ -38,11 +44,65 @@ def _drop_conflicting_sampling(kw: dict[str, Any]) -> None:
         kw["top_p"] = NOT_GIVEN
 
 
+def _is_server_tool_block(block: Any) -> bool:
+    """Whether *block* is a ``tool_use`` for a Claude server-side tool."""
+    if getattr(block, "type", None) != "tool_use":
+        return False
+    name = getattr(block, "name", "") or ""
+    return name in NATIVE_TOOL_TYPES
+
+
+def _coerce_tool_result_content(content: Any) -> Any:
+    """Reduce a server tool-result block's ``content`` to a JSON-safe value.
+
+    Anthropic's per-tool result blocks (``code_execution_tool_result``,
+    ``web_search_tool_result``, …) wrap their payload in a typed
+    Pydantic-like object (e.g. ``CodeExecutionResultBlock(stdout="4",
+    return_code=0, …)``).  We try ``model_dump()`` first, fall back to
+    a JSON round-trip, and finally to ``str()`` so the
+    :class:`ServerToolCall.result` field always serialises cleanly when
+    the tracer dumps an ``AgentResult``.
+    """
+    if content is None:
+        return None
+    if isinstance(content, (str, int, float, bool)):
+        return content
+    if isinstance(content, list):
+        return [_coerce_tool_result_content(item) for item in content]
+    if isinstance(content, dict):
+        return content
+    if hasattr(content, "model_dump"):
+        try:
+            return content.model_dump()
+        except Exception:
+            pass
+    try:
+        return json.loads(json.dumps(content, default=str))
+    except (TypeError, ValueError):
+        return str(content)
+
+
 def normalize_message_response(raw: Any) -> AnthropicLLMResponse:
-    """Map Claude ``Message`` → :class:`AnthropicLLMResponse` (Choices contract)."""
+    """Map Claude ``Message`` → :class:`AnthropicLLMResponse` (Choices contract).
+
+    Splits ``tool_use`` blocks into two buckets:
+
+    * **Client tools** (model invokes a custom function) → emitted as
+      :class:`ToolCall` entries on ``assistant.tool_calls`` so the
+      agent loop dispatches them.
+    * **Server-side tools** (``web_search`` / ``web_fetch`` /
+      ``code_execution`` / …) → emitted as :class:`ServerToolCall`
+      entries on ``response.server_tool_calls`` for observability
+      (``BaseAnthropic`` reports them with
+      ``ToolCallRecord(executed_by="provider")``).
+    """
 
     text_parts: list[str] = []
     tool_calls: list[ToolCall] = []
+    server_tool_calls: list[ServerToolCall] = []
+    # Cache the server tool_use id → name so we can attach
+    # ``tool_result`` payloads emitted in the same response.
+    server_ids: dict[str, ServerToolCall] = {}
 
     for block in getattr(raw, "content", None) or []:
         btype = getattr(block, "type", None)
@@ -50,14 +110,23 @@ def normalize_message_response(raw: Any) -> AnthropicLLMResponse:
             t = getattr(block, "text", None)
             if t:
                 text_parts.append(str(t))
-        elif btype == "tool_use":
+            continue
+
+        # Both ``tool_use`` (custom client tool) and ``server_tool_use``
+        # (Anthropic-executed native tool — web_search, web_fetch,
+        # code_execution) carry id / name / input on the same shape.
+        if btype in ("tool_use", "server_tool_use"):
             bid = getattr(block, "id", "") or ""
             name = getattr(block, "name", "") or ""
             inp = getattr(block, "input", None)
-            if isinstance(inp, dict):
-                payload = inp
-            else:
-                payload = {"value": inp}
+            payload = inp if isinstance(inp, dict) else {"value": inp}
+
+            if btype == "server_tool_use" or name in NATIVE_TOOL_TYPES:
+                stc = ServerToolCall(id=bid, name=name, input=dict(payload))
+                server_tool_calls.append(stc)
+                server_ids[bid] = stc
+                continue
+
             try:
                 arguments = json.dumps(payload, default=str)
             except (TypeError, ValueError):
@@ -69,6 +138,23 @@ def normalize_message_response(raw: Any) -> AnthropicLLMResponse:
                     function=ToolCallFunction(name=name, arguments=arguments),
                 ),
             )
+            continue
+
+        # Server-side result blocks: legacy ``tool_result`` plus the
+        # per-tool variants Anthropic emits in non-streaming responses
+        # (``web_search_tool_result``, ``code_execution_tool_result``,
+        # ``web_fetch_tool_result``, …).  All carry ``tool_use_id`` +
+        # ``content``.  Extract the most useful summary onto the
+        # matching :class:`ServerToolCall`.
+        if btype == "tool_result" or (
+            isinstance(btype, str) and btype.endswith("_tool_result")
+        ):
+            tool_use_id = getattr(block, "tool_use_id", None) or ""
+            target = server_ids.get(tool_use_id)
+            if target is None:
+                continue
+            content = getattr(block, "content", None)
+            target.result = _coerce_tool_result_content(content)
 
     merged_text = "\n".join(text_parts).strip() or None
     assistant = AssistantMessage(
@@ -88,14 +174,45 @@ def normalize_message_response(raw: Any) -> AnthropicLLMResponse:
             completion_tokens=int(out_t),
             total_tokens=int(inp) + int(out_t) + int(cache_read) + int(cache_create),
             cached_tokens=int(cache_read),
+            cache_read_input_tokens=int(cache_read),
+            cache_creation_input_tokens=int(cache_create),
         )
 
+    stop_reason = getattr(raw, "stop_reason", None)
     return AnthropicLLMResponse(
         choices=[_Choice(message=assistant)],
         usage=usage_out,
         model=str(getattr(raw, "model", None) or "") or None,
         response_id=getattr(raw, "id", None),
+        stop_reason=str(stop_reason) if stop_reason is not None else None,
+        organization_id=_extract_organization_id(raw),
+        server_tool_calls=server_tool_calls,
     )
+
+
+def _extract_organization_id(raw: Any) -> str | None:
+    """Best-effort lookup of the Anthropic organisation id from a response.
+
+    Anthropic surfaces ``anthropic-organization-id`` as an HTTP response
+    header.  The SDK exposes raw headers via ``response.response.headers``
+    (when wrapped with ``with_raw_response``); when missing, returns
+    ``None`` rather than guessing.
+    """
+    # 1) Direct attribute (some SDK paths attach it post-deserialisation).
+    direct = getattr(raw, "organization_id", None) or getattr(
+        raw, "anthropic_organization_id", None
+    )
+    if isinstance(direct, str) and direct.strip():
+        return direct.strip()
+    # 2) When ``raw`` carries an HTTP ``response`` (e.g. _LegacyAPIResponse),
+    # peek at the headers.
+    response = getattr(raw, "response", None)
+    headers = getattr(response, "headers", None) if response is not None else None
+    if headers is not None:
+        val = headers.get("anthropic-organization-id") if hasattr(headers, "get") else None
+        if isinstance(val, str) and val.strip():
+            return val.strip()
+    return None
 
 
 def build_create_kwargs(
@@ -112,11 +229,36 @@ def build_create_kwargs(
     extra_headers: dict[str, str] | None,
     stream: bool = False,
 ) -> dict[str, Any]:
-    """Assemble keyword arguments for ``Anthropic.messages.create``."""
+    """Assemble keyword arguments for ``Anthropic.messages.create``.
+
+    Phase B (0.2.0) extensions interpreted here:
+
+    * ``_cache_tools`` / ``_cache_system`` — attach ``cache_control``
+      blocks to enable Anthropic prompt caching.
+    * ``_strict_tools`` — flag every custom tool definition with
+      ``strict: True``.
+    * ``_disable_parallel_tool_use`` — augment ``tool_choice`` with
+      ``disable_parallel_tool_use: true`` (per Anthropic docs).
+    * Required beta headers for native tools (``web_fetch``,
+      ``code_execution``) are auto-collected and merged into
+      ``anthropic-beta`` so callers do not need to remember them.
+    """
+
+    # Phase B private markers — interpret before drop_unsupported_sampling
+    # strips them.
+    cache_tools = bool(merged_extras.get("_cache_tools"))
+    cache_system = bool(merged_extras.get("_cache_system"))
+    strict_tools = bool(merged_extras.get("_strict_tools"))
+    disable_parallel = bool(merged_extras.get("_disable_parallel_tool_use"))
 
     system, msgs = translate_messages(framework_messages)
-    claude_tools = flatten_tools(tools)
+    system_payload = system_with_cache(system, cache_system=cache_system)
+    claude_tools = flatten_tools(
+        tools, cache_tools=cache_tools, strict_tools=strict_tools
+    )
     mapped_choice = anthropic_tool_choice(tool_choice)
+    if mapped_choice is not None and disable_parallel:
+        mapped_choice = {**mapped_choice, "disable_parallel_tool_use": True}
 
     clean_extras = drop_unsupported_sampling(merged_extras)
     beta_str = clean_extras.pop("anthropic_beta", None)
@@ -133,17 +275,27 @@ def build_create_kwargs(
         "stream": stream,
     }
 
-    if system is not None:
-        kw["system"] = system
+    if system_payload is not None:
+        kw["system"] = system_payload
+
+    # Collect beta headers required by any native tools in the request.
+    auto_betas = required_beta_headers(tools)
 
     headers: dict[str, str] | None = None
     if extra_headers:
         headers = dict(extra_headers)
 
+    # Merge user-supplied + auto-collected beta header tokens.
+    beta_tokens: list[str] = []
     if isinstance(beta_str, str) and beta_str.strip():
-        hs = beta_str.strip()
+        beta_tokens.extend(t.strip() for t in beta_str.split(",") if t.strip())
+    for tok in auto_betas:
+        if tok not in beta_tokens:
+            beta_tokens.append(tok)
+
+    if beta_tokens:
         headers = dict(headers or {})
-        headers.setdefault("anthropic-beta", hs)
+        headers["anthropic-beta"] = ",".join(beta_tokens)
 
     for key in ("model", "max_tokens", "messages", "stream"):
         clean_extras.pop(key, None)

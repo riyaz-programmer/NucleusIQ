@@ -7,7 +7,200 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-## Unreleased
+## [0.7.12] — 2026-05-26
+
+> Single coordinated release promoting every alpha/beta provider to its first stable line, plus the provider-agnostic native-tool observability that powers it.
+>
+> **Coordinated package versions:**
+>
+> - `nucleusiq` **0.7.12**
+> - `nucleusiq-anthropic` **0.2.0** — Stable (Phase B feature-complete: native server tools, prompt caching, extended thinking, server-tool observability, 3 example scripts, 6 live integration tests)
+> - `nucleusiq-ollama` **0.2.0** — Stable (+ vision)
+> - `nucleusiq-groq` **0.1.0** — Stable
+> - `nucleusiq-mcp` **0.1.0** — Stable
+> - `nucleusiq-openai` **0.7.0**
+> - `nucleusiq-gemini` **0.3.0**
+>
+> All providers floor on `nucleusiq>=0.7.12`. **3,705+ tests passing across the monorepo** (incl. 6 live Anthropic Phase B tests against the real API). After this release the project returns to a bug-fix / single-provider cadence.
+
+### Monorepo test gate at the time of this entry (all non-live, no API keys required)
+
+| Package | Tests | Coverage | Status |
+| --- | --- | --- | --- |
+| `nucleusiq` | **2603 passed** (2 skipped) | n/a (no gate) | green |
+| `nucleusiq-anthropic` | **151 unit passed + 6 live integration passed** | 95.91% | green (gate ≥ 95%) |
+| `nucleusiq-openai` | **232 passed** (5 skipped) | n/a (existing gate) | green |
+| `nucleusiq-gemini` | **292 unit passed** (1 live integration unrelated) | n/a (existing gate) | green |
+| `nucleusiq-groq` | **79 passed** | 92.51% | green (gate ≥ 90%) |
+| `nucleusiq-ollama` | **98 passed** | 99.85% | green (gate ≥ 95%) |
+| `nucleusiq-mcp` | **248 passed** | n/a | green |
+| **Total** | **3,705+ passing** (incl. 6 live Anthropic Phase B integration tests against `claude-sonnet-4-5-20250929`) | — | — |
+
+`scripts/verify_core_package_layout.py` reports OK on every package; `ruff` is clean on every file touched in this sprint.
+
+### Added — core (Batch A) — already in this branch
+
+**Provider-agnostic native-tool observability scaffolding** in `nucleusiq` (additive, no breaking changes — version bump to **`0.7.12`** pending):
+
+- **`ToolCallRecord.executed_by: Literal["local", "provider"] = "local"`** — new field on `nucleusiq.agents.AgentResult.tool_calls` that lets the tracer distinguish locally-executed tools from provider/server-executed ones (Anthropic `web_search`, OpenAI `web_search` / `code_interpreter` / `file_search`, Gemini `google_search` / `code_execution`, Groq `compound_custom`, …). `build_tool_call_record` defensively coerces unknown values to `"local"`.
+- **`LLMCallRecord` enrichment** — new fields populated by record builders:
+  - `provider: str | None` — provider identifier (`"anthropic"`, `"openai"`, `"gemini"`, …)
+  - `request_id: str | None` — provider-side response id for cross-system correlation
+  - `organization_id: str | None` — best-effort header lookup
+  - `stop_reason: str | None` — provider-reported finish reason
+  - `cache_read_input_tokens: int`, `cache_creation_input_tokens: int` — per-bucket prompt-cache usage
+  - `metadata: dict[str, Any]` — generic bag for provider-specific extras
+- **`build_llm_call_record` / `build_llm_call_record_from_stream`** auto-extract these from both **Anthropic-style** (`usage.cache_read_input_tokens`, `stop_reason`) and **OpenAI-style** (`usage.prompt_tokens_details.cached_tokens`, `finish_reason`) response shapes via new internal helpers `_extract_str`, `_extract_int`, `_usage_cache_tokens`.
+- **Autonomous sub-agent telemetry** (`modes/autonomous/telemetry.py`) — propagates all new fields from sub-agent `LLMCallRecord`s into the parent `AgentResult` so fidelity is preserved across nested decompositions.
+- **Tests** — 9 new dedicated unit tests in `tests/unit/test_execution_tracer.py` covering: `ToolCallRecord.executed_by` coercion, defaults on `LLMCallRecord`, Anthropic-style + OpenAI-style cache-token extraction, auto-extraction of `request_id` / `stop_reason`, and stream-record propagation.
+
+### Added — `nucleusiq-anthropic` 0.2.0 (Stable) — Phase B feature-complete
+
+Promoted from **Alpha (`0.1.0a1`) → Stable (`0.2.0`)**; `Development Status :: 5 - Production/Stable`; floor bumped to **`nucleusiq>=0.7.12`**. Description updated to "Anthropic Claude provider (native server tools, prompt caching, extended thinking, server-tool observability)".
+
+**New `AnthropicTool` factory** (`nucleusiq_anthropic.tools.anthropic_tool`) — first-class native server tool API:
+
+```python
+from nucleusiq_anthropic import AnthropicTool, AnthropicLLMParams, BaseAnthropic
+
+agent = Agent(
+    llm=BaseAnthropic(
+        model_name="claude-opus-4-20250514",
+        llm_params=AnthropicLLMParams(
+            thinking="medium",          # extended thinking, 8000-token budget
+            cache_tools=True,           # prompt-cache tool definitions
+            cache_system=True,          # prompt-cache system prompt
+            strict_tools=True,          # strict tool-use schema
+        ),
+    ),
+    tools=[
+        AnthropicTool.web_search(max_uses=3),    # server-side; NO beta header needed
+        AnthropicTool.web_fetch(),               # server-side; auto-injects anthropic-beta: web-fetch-2025-09-10
+        AnthropicTool.code_execution(),          # server-side; auto-injects anthropic-beta: code-execution-2025-05-22
+        lookup_order,                            # your own @tool — still works
+    ],
+)
+```
+
+- **`NATIVE_TOOL_TYPES = {"web_search", "web_fetch", "code_execution"}`** — registry of supported native tools.
+- **`NATIVE_TOOL_WIRE_TYPES`** — dated wire identifiers (`web_search_20250305`, `web_fetch_20250910`, `code_execution_20250522`) injected automatically by `marker_to_wire()`.
+- **`NATIVE_TOOL_BETA_HEADERS`** — required `anthropic-beta` tokens (`web-fetch-2025-09-10`, `code-execution-2025-05-22`) collected automatically by `required_beta_headers(tools)` and merged with any user-supplied `anthropic-beta` headers in `build_create_kwargs`.
+- **`tools/converter.py`** — `to_anthropic_tool_definition` now routes `AnthropicTool` markers through `marker_to_wire` before falling back to OpenAI-style / `input_schema` conversion. `spec_looks_native` recognises both internal markers and raw dated wire identifiers. Unknown native names are returned verbatim so Anthropic surfaces a precise error instead of NucleusIQ silently mutating the spec.
+
+**Prompt caching** — `AnthropicLLMParams.cache_tools` and `.cache_system` thread through `build_create_kwargs`:
+
+- `_shared/wire.py`: `flatten_tools(..., cache_tools=True)` adds a `cache_control` block to the last tool definition; `system_with_cache(text, cache_system=True)` upgrades the plain system string into a block list with `cache_control`.
+- Private marker keys (`_cache_tools`, `_cache_system`, `_strict_tools`, `_disable_parallel_tool_use`) are interpreted by `build_create_kwargs` and then stripped by `drop_unsupported_sampling` before reaching `messages.create`.
+
+**Extended thinking** — `AnthropicLLMParams.thinking` accepts:
+
+- `bool` — `True` → minimal thinking, `False` → disabled
+- `"low"|"medium"|"high"|"max"` (new `ThinkingEffort` literal) → resolved via `_THINKING_EFFORT_BUDGETS` to `{"type": "enabled", "budget_tokens": N}`
+- `dict` — passthrough for full control
+
+**Strict tools / parallel-tool-use guard** — `AnthropicLLMParams.strict_tools` adds `strict: True` to every custom (non-native) tool definition; `AnthropicLLMParams.disable_parallel_tool_use` augments `tool_choice` with `disable_parallel_tool_use: true`.
+
+**Server-tool observability** — Anthropic's server-executed `tool_use` blocks no longer mix with client-side tool calls:
+
+- New `ServerToolCall` Pydantic model (`_shared/response_models.py`) capturing `id`, `name`, `input`, `result`.
+- `UsageInfo` extended with `cache_read_input_tokens` and `cache_creation_input_tokens`.
+- `AnthropicLLMResponse` extended with `stop_reason`, `organization_id`, `server_tool_calls: list[ServerToolCall]`, plus a `request_id` property alias for `response_id`.
+- **Non-stream path** (`nb_anthropic/messages.py`) — `normalize_message_response` splits incoming `tool_use` blocks via `_is_server_tool_block`. Client blocks become `ToolCall`s; server blocks land in `AnthropicLLMResponse.server_tool_calls`. `_extract_organization_id` performs best-effort header extraction.
+- **Stream path** (`nb_anthropic/stream_adapter.py`) — `_process_raw_events` separates server vs client tool calls in `content_block_start` events, surfaces `stop_reason` / `request_id` / per-cache-bucket usage / `server_tool_calls` on the terminal `COMPLETE` `StreamEvent.metadata`. `thinking_delta` events handled correctly.
+
+**Public API** — `from nucleusiq_anthropic import AnthropicTool, ThinkingEffort, AnthropicLLMParams, BaseAnthropic, ...` (`__all__` updated).
+
+**Server-tool observability hardening (post-Phase B normalizer fix):**
+
+Anthropic emits `server_tool_use` blocks (not `tool_use`) for native tools, plus per-tool result blocks like `code_execution_tool_result` and `web_search_tool_result` (not generic `tool_result`). The non-stream `normalize_message_response` was updated to:
+
+- Treat `tool_use` and `server_tool_use` as the same id/name/input shape, with `server_tool_use` always routed to `ServerToolCall`.
+- Match any block whose type ends in `_tool_result` (web_search, code_execution, web_fetch, future variants) as a server tool-result attachment.
+- Reduce the result payload via new `_coerce_tool_result_content` helper — accepts Pydantic-like objects (`model_dump()`), dicts, lists, scalars, or arbitrary objects (with JSON-safe fallback) — so `ServerToolCall.result` is always JSON-serialisable.
+
+**Phase B example scripts** (`src/providers/llms/anthropic/examples/agents/`):
+
+- `10_anthropic_native_tools.py` — calls `BaseAnthropic.call(...)` directly with `AnthropicTool.web_search(max_uses=2)` then `AnthropicTool.code_execution()`; prints the populated `server_tool_calls` list and stop reason.
+- `11_anthropic_prompt_caching.py` — runs an `Agent` twice with a 9,780-character system prompt and `AnthropicLLMParams(cache_system=True)`; prints per-`LLMCallRecord` `prompt_tokens`, `cache_read_input_tokens`, `cache_creation_input_tokens`, `stop_reason` so the cache hit is visible.
+- `12_anthropic_extended_thinking.py` — runs an `Agent` at `thinking="low"` and `thinking="medium"` (resolved to 2 000 / 8 000 budget tokens) with `max_output_tokens=16_384` (must exceed the budget) and `temperature=1.0` (required by Anthropic when thinking is on).
+- Default model: `claude-sonnet-4-5-20250929` (override via `ANTHROPIC_PHASE_B_MODEL`). All three scripts have been verified end-to-end against the live API.
+
+**Live integration tests** (`src/providers/llms/anthropic/tests/integration/test_anthropic_phase_b_live.py`):
+
+Gated by `pytest -m integration` and `ANTHROPIC_API_KEY`; excluded from the default test run and from CI. Each test skips cleanly if the selected model isn't available on the active API key. Covers:
+
+- `test_live_web_search_emits_server_tool_call` — `AnthropicTool.web_search()` surfaces `ServerToolCall(name="web_search")` in `server_tool_calls`.
+- `test_live_code_execution_emits_server_tool_call` — `AnthropicTool.code_execution()` surfaces `ServerToolCall(name="code_execution")` with a populated `.result`.
+- `test_live_prompt_caching_reads_cache_on_second_call` — two calls with the same long system + `cache_system=True` produce non-zero `cache_creation_input_tokens + cache_read_input_tokens`.
+- `test_live_extended_thinking_completes[low]` / `[medium]` — `thinking="low"` and `"medium"` end-to-end with non-empty completion text and a populated `stop_reason`.
+- `test_live_disable_parallel_tool_use_round_trip` — `disable_parallel_tool_use=True` reaches the wire without a 400 error.
+
+**Tests + coverage:**
+
+- **151 unit tests** + **6 live integration tests** passing; **95.91% line coverage** (gate `--cov-fail-under=95`).
+- New `tests/test_anthropic_tool.py` — `NATIVE_TOOL_TYPES` membership, wire/beta-header consistency, factory methods with parameter validation, `marker_to_wire` conversion incl. unknown-marker fallback, `required_beta_headers` collection, `build_create_kwargs` integration of native tools / caching / strict tools / `disable_parallel_tool_use`, end-to-end `BaseAnthropic.call` flows.
+- Updated `tests/test_stream_events.py` — `_process_raw_events` separation of `server_tool_calls`, `stop_reason` + cache tokens on `COMPLETE`, `message_start` usage handling, `thinking_delta`.
+- Updated `tests/test_messages_normalize.py` — 4 new tests for `server_tool_use`, per-tool `*_tool_result` (incl. list content), missing-id handling, and `_coerce_tool_result_content` Pydantic/JSON/string fallbacks.
+- Updated `tests/test_converter.py` — `test_spec_looks_native_registry_membership` reflects the populated `NATIVE_TOOL_TYPES`.
+- Ruff clean.
+
+### Added — provider-agnostic native-tool observability — wired across the agent loop
+
+- **Generic `build_server_tool_call_records(server_tool_calls, *, round)`** factory in `nucleusiq.agents.observability.record_builders` — accepts mappings, Pydantic models, or any object exposing `id` / `name` / `input` / `result` attributes (Anthropic `ServerToolCall`, OpenAI hosted-tool blocks, Gemini `code_execution` blocks). Empty / `None` inputs return `[]` so the call-sites can call it unconditionally.
+- **`base_mode.py` agent loop** now centrally detects the provider for every LLM call via `get_provider_from_llm(agent.llm)` and threads `provider="anthropic" | "openai" | "google" | "ollama" | "groq"` into both `build_llm_call_record` and `build_llm_call_record_from_stream`. The non-stream path, the streaming `complete_event` path, and the autonomous synthesis stream path all also surface any `server_tool_calls` as `ToolCallRecord(executed_by="provider")` automatically. **One change, six providers benefit.**
+- **3 new unit tests** in `tests/unit/test_execution_tracer.py` covering the new factory: dict + Pydantic-style item shapes and the empty-input fast path.
+
+### Added — `nucleusiq` 0.7.12
+
+- `src/nucleusiq/pyproject.toml` `version` → `0.7.12`; `src/nucleusiq/core/__init__.py` `__version__` → `"0.7.12"`.
+
+### Added — `nucleusiq-ollama` 0.2.0 Stable
+
+- Promoted from **Alpha (`0.1.0a1`) → Stable (`0.2.0`)**; classifier flipped to `Development Status :: 5 - Production/Stable`; floor bumped to `nucleusiq>=0.7.12`.
+- **Vision (image messages) in `_shared/wire.py`** — `sanitize_messages` now splits OpenAI-style multimodal content lists into Ollama's chat-message shape: text parts become the `content` string; `image_url` parts whose URL is a `data:image/*;base64,…` URL are decoded into the `images` field; raw `{"type": "image", "data": "..."}` blocks pass through; HTTP(S) image URLs are skipped with a warning (no implicit download).
+- New helpers `_split_data_url` and `_extract_text_and_images` cover the data-URL split logic.
+- `LLMCallRecord.provider="ollama"` is now populated automatically via the central `base_mode.py` hook.
+- **+14 new unit tests** in `tests/test_wire.py` — covers data URL decoding, OpenAI-part splitting, HTTP-URL warning, raw `image` blocks, system + user vision messages, merging with pre-existing `images`, garbage parts. **98 tests passing, coverage 99.85%** (gate ≥ 95%).
+
+### Added — `nucleusiq-groq` 0.1.0 Stable
+
+- Promoted from **Beta (`0.1.0b1`) → Stable (`0.1.0`)**; classifier flipped to `Development Status :: 5 - Production/Stable`; floor bumped to `nucleusiq>=0.7.12`.
+- New **`ServerToolCall`** model in `_shared/response_models.py`; `GroqLLMResponse.server_tool_calls: list[ServerToolCall]` field added.
+- `nb_groq/chat.py` `_extract_server_tool_calls` reads Groq's hosted/compound-tool surface (`message.executed_tools`) and emits server-tool records ready for the central agent-loop hook; handles dict, Pydantic-`model_dump`, and SimpleNamespace-style SDK items; auto-parses JSON `arguments` strings.
+- `LLMCallRecord.provider="groq"` is now populated automatically.
+- **+2 new unit tests** in `tests/test_chat.py`. **79 tests passing, coverage 92.51%** (gate ≥ 90%).
+
+### Added — `nucleusiq-openai` 0.7.0
+
+- Version bumped `0.6.4` → `0.7.0`; floor bumped to `nucleusiq>=0.7.12`.
+- New **`ServerToolCall`** model in `_shared/response_models.py`; `_LLMResponse.server_tool_calls: list[ServerToolCall]` field added.
+- **`normalize_responses_output`** in `nb_openai/response_normalizer.py` now also detects Responses-API output items of type `web_search_call`, `code_interpreter_call`, `file_search_call`, `computer_use_call`, `image_generation_call` and surfaces them as `ServerToolCall` records (with `name` normalised by stripping the `_call` suffix — e.g. `web_search`). Existing `native_outputs` back-compat preserved.
+- `LLMCallRecord.provider="openai"` is now populated automatically.
+- **+2 new unit tests** in `tests/test_tool_conversion.py`. **232 tests passing**.
+
+### Added — `nucleusiq-gemini` 0.3.0
+
+- Version bumped `0.2.6` → `0.3.0`; floor bumped to `nucleusiq>=0.7.12`.
+- New **`ServerToolCall`** model in `_shared/response_models.py`; `GeminiLLMResponse.server_tool_calls: list[ServerToolCall]` field added.
+- **`normalize_response`** / `_normalize_candidate` in `nb_gemini/response_normalizer.py` now pair `executable_code` + `code_execution_result` parts into a single `code_execution` server-tool record (orphan `executable_code` without a paired result is still recorded as an unfinished server invocation); `grounding_metadata` on a candidate becomes a `google_search` server-tool record with the metadata dump as the result payload.
+- `LLMCallRecord.provider="google"` is now populated automatically (consistent with the existing `get_provider_from_llm` mapping).
+- **292 unit tests passing** (one live integration test unrelated to these changes returned empty content from the API).
+
+### Added — `nucleusiq-mcp` 0.1.0 Stable
+
+- Promoted from **Beta (`0.1.0b1`) → Stable (`0.1.0`)**; classifier flipped to `Development Status :: 5 - Production/Stable`; floor bumped to `nucleusiq>=0.7.12`; core `nucleusiq[mcp]` extras alias bumped to `>=0.1.0`. **No API changes from `0.1.0b1`.** 248 tests passing.
+
+### Deferred — explicitly out of v0.7.12 scope
+
+- **OpenAI Web Search GA parity** — observability emission ships in v0.7.12; full GA parity (Responses + Chat path equivalence, capability surface) becomes a `v0.7.13+` milestone.
+- **Devil's advocate Anthropic notebook** — deferred to a follow-up showcase release.
+- **Groq Phase B** (Responses API + hosted tools + remote MCP) — targets `nucleusiq-groq 0.2.x`.
+- **Anthropic Phase C** (Memory / `computer_use` / `bash`) — targets `nucleusiq-anthropic 0.3.x`.
+- **Ollama embeddings** — beyond chat + vision.
+
+---
+
+## [0.7.11](https://github.com/nucleusbox/NucleusIQ/releases/tag/v0.7.11) — 2026-05-25
 
 ### Added
 

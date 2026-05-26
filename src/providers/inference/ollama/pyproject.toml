@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "nucleusiq-ollama"
-version = "0.1.0a1"
+version = "0.2.0"
 description = "Ollama inference provider for the NucleusIQ AI agent framework (official ollama Python SDK)."
 readme = "README.md"
 requires-python = ">=3.10,<4.0"
@@ -12,7 +12,7 @@ license = { text = "MIT" }
 authors = [{ name = "Nucleusbox", email = "info@nucleusbox.com" }]
 keywords = ["AI", "agents", "ollama", "local-llm", "nucleusiq"]
 classifiers = [
-    "Development Status :: 3 - Alpha",
+    "Development Status :: 5 - Production/Stable",
     "Intended Audience :: Developers",
     "License :: OSI Approved :: MIT License",
     "Programming Language :: Python :: 3",
@@ -25,7 +25,7 @@ classifiers = [
 ]
 
 dependencies = [
-    "nucleusiq>=0.7.10",
+    "nucleusiq>=0.7.12",
     "ollama>=0.5.0,<1.0",
 ]
 

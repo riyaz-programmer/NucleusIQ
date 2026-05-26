@@ -7,9 +7,11 @@
 | | |
 |--|--|
 | **PyPI package** | **`nucleusiq-anthropic`** |
-| **This line** | **`0.1.0a1`** — **Development Status :: 3 - Alpha** (pre-stable API; pin versions in production). |
-| **What’s in this alpha** | `BaseAnthropic` (`call`, `call_stream`), chat/tool translation (`wire`), **`structured_output`** (JSON Schema -> `output_config.format`, parses assistant JSON into Pydantic/dataclasses), error mapping + retries, stream adapter, `AnthropicLLMParams` (`top_k`, `anthropic_beta`, `extra_headers`), **≥95%** unit-test coverage on `nucleusiq_anthropic`. |
-| **Not in this alpha yet** | Rich observability (`LLMCallRecord` fields); full plugin/memory audit in the design doc; **server-side / native Claude tools** registry is empty until Phase B/C. |
+| **This line** | **`0.2.0`** — **Development Status :: 5 - Production/Stable** (first stable line; semver applies). |
+| **What’s in 0.2.0 (Phase B feature-complete)** | `BaseAnthropic` (`call`, `call_stream`), chat/tool translation (`wire`), **`structured_output`**, error mapping + retries, stream adapter, **`AnthropicTool` factory** for native server tools (`web_search`, `web_fetch`, `code_execution`) with auto-injected `anthropic-beta` headers, **prompt caching** (`cache_tools`, `cache_system`), **extended thinking** (`thinking="low"|"medium"|"high"|"max"` or dict), **`strict_tools`** + **`disable_parallel_tool_use`**, **server-tool observability** with full handling of `server_tool_use` + per-tool `*_tool_result` blocks (`code_execution_tool_result`, `web_search_tool_result`, …) → `AnthropicLLMResponse.server_tool_calls` + `ToolCallRecord(executed_by="provider")` automatically emitted by the core agent loop, full `LLMCallRecord` enrichment (`stop_reason`, `cache_read_input_tokens`, `cache_creation_input_tokens`, `request_id`, `organization_id`, `provider="anthropic"`). **151 unit tests + 6 live integration tests, 95.91% coverage** (gate ≥ 95%). |
+| **Phase B examples** | `examples/agents/10_anthropic_native_tools.py` (web_search + code_execution), `11_anthropic_prompt_caching.py` (`cache_system=True`, prints per-`LLMCallRecord` cache tokens), `12_anthropic_extended_thinking.py` (`thinking="low"` / `"medium"`). All three verified end-to-end against `claude-sonnet-4-5-20250929`; override the model with `ANTHROPIC_PHASE_B_MODEL=<id>`. |
+| **Live integration tests** | `tests/integration/test_anthropic_phase_b_live.py` — 6 tests (`-m integration`, requires `ANTHROPIC_API_KEY`): web_search, code_execution, prompt caching, extended thinking ×2 (low/medium), `disable_parallel_tool_use`. Skips cleanly if the chosen model is not available on the active API key. Excluded from default + CI runs. |
+| **Deferred** | Phase C (Memory / `computer_use` / `bash`) — targets `nucleusiq-anthropic 0.3.x`. |
 
 Full roadmap: [`docs/design/ANTHROPIC_PROVIDER.md`](../../../../docs/design/ANTHROPIC_PROVIDER.md).
 

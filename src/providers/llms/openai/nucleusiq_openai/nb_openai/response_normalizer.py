@@ -17,11 +17,71 @@ from nucleusiq_openai._shared.models import (
 )
 from nucleusiq_openai._shared.response_models import (
     AssistantMessage,
+    ServerToolCall,
     ToolCall,
     ToolCallFunction,
     _Choice,
     _LLMResponse,
 )
+
+# Responses API output item types that represent server-executed (hosted) tool
+# invocations.  See https://platform.openai.com/docs/api-reference/responses .
+_OPENAI_NATIVE_TOOL_ITEM_TYPES = frozenset(
+    {
+        "web_search_call",
+        "code_interpreter_call",
+        "file_search_call",
+        "computer_use_call",
+        "image_generation_call",
+    }
+)
+
+
+def _item_to_server_tool_call(item: Any) -> ServerToolCall | None:
+    """Build a :class:`ServerToolCall` from a Responses API output item.
+
+    Returns ``None`` if the item shape cannot be inspected.  Result and
+    input fields are populated best-effort from common attribute names
+    surfaced by the SDK (``action`` / ``arguments`` / ``queries`` for
+    input; ``output`` / ``results`` / ``status`` for result).
+    """
+    try:
+        raw = item.model_dump() if hasattr(item, "model_dump") else dict(item)
+    except Exception:
+        raw = {}
+    item_type = (
+        getattr(item, "type", None) or (raw.get("type") if raw else None) or ""
+    )
+    tool_id = getattr(item, "id", None) or (raw.get("id") if raw else None) or ""
+    # Strip the trailing "_call" so the surface matches Anthropic's
+    # ``web_search`` / ``code_execution`` naming where possible.
+    name = item_type[: -len("_call")] if item_type.endswith("_call") else item_type
+    def _read(key: str) -> Any:
+        if isinstance(raw, dict) and raw.get(key) is not None:
+            return raw[key]
+        return getattr(item, key, None)
+
+    input_payload: dict[str, Any] = {}
+    for key in ("action", "arguments", "queries", "query", "input"):
+        value = _read(key)
+        if isinstance(value, dict):
+            input_payload = value
+            break
+        if value is not None:
+            input_payload = {key: value}
+            break
+    result: Any = None
+    for key in ("output", "results", "result", "status"):
+        value = _read(key)
+        if value is not None:
+            result = value
+            break
+    return ServerToolCall(
+        id=str(tool_id),
+        name=str(name),
+        input=input_payload,
+        result=result,
+    )
 
 InputItem = MessageInputItem | FunctionCallInput | FunctionCallOutput
 
@@ -205,11 +265,17 @@ def normalize_responses_output(response: Any) -> _LLMResponse:
 
     * ``output[type="message"]`` → ``message.content``
     * ``output[type="function_call"]`` → ``message.tool_calls``
+    * ``output[type in _OPENAI_NATIVE_TOOL_ITEM_TYPES]`` (``web_search_call``,
+      ``code_interpreter_call``, ``file_search_call``, ``computer_use_call``,
+      ``image_generation_call``) → ``response.server_tool_calls`` (surfaced
+      as :class:`ToolCallRecord(executed_by="provider")` by the core agent
+      loop) AND ``message._native_outputs`` (back-compat).
     * Other output types → ``message._native_outputs``
     """
     content_parts: list[str] = []
     tool_calls: list[ToolCall] = []
     native_outputs: list[dict[str, Any]] = []
+    server_tool_calls: list[ServerToolCall] = []
 
     output_items = getattr(response, "output", []) or []
     for item in output_items:
@@ -244,12 +310,20 @@ def normalize_responses_output(response: Any) -> _LLMResponse:
             except Exception:
                 native_outputs.append({"type": str(item_type)})
 
+            if item_type in _OPENAI_NATIVE_TOOL_ITEM_TYPES:
+                stc = _item_to_server_tool_call(item)
+                if stc is not None:
+                    server_tool_calls.append(stc)
+
     message = AssistantMessage(
         content="\n\n".join(content_parts) if content_parts else None,
         tool_calls=tool_calls or None,
         native_outputs=native_outputs or None,
     )
-    return _LLMResponse(choices=[_Choice(message=message)])
+    return _LLMResponse(
+        choices=[_Choice(message=message)],
+        server_tool_calls=server_tool_calls,
+    )
 
 
 def build_responses_text_config(

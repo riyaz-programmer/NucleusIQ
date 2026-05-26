@@ -12,6 +12,7 @@ from nucleusiq.llms.errors import LLMError
 from nucleusiq.streaming.events import StreamEvent
 
 from nucleusiq_anthropic.nb_anthropic.stream_create import open_messages_stream
+from nucleusiq_anthropic.tools.anthropic_tool import NATIVE_TOOL_TYPES
 
 logger = logging.getLogger(__name__)
 
@@ -100,6 +101,8 @@ def _usage_payload(usage_obj: Any) -> dict[str, int]:
         "prompt_tokens": inp + cre + crd,
         "completion_tokens": outp,
         "total_tokens": inp + outp + cre + crd,
+        "cache_read_input_tokens": crd,
+        "cache_creation_input_tokens": cre,
     }
 
 
@@ -123,6 +126,7 @@ async def _process_raw_events(
     usage_dict: dict[str, int] | None = None
     response_id: str | None = None
     model_label: str | None = None
+    stop_reason: str | None = None
 
     async for event in chunk_iter:
         etype = getattr(event, "type", None)
@@ -135,6 +139,10 @@ async def _process_raw_events(
                 model_label = (
                     str(msg_model_name) if msg_model_name is not None else None
                 )
+                # Some SDK versions surface usage on message_start as well
+                start_usage = getattr(msg, "usage", None)
+                if start_usage is not None:
+                    usage_dict = _usage_payload(start_usage)
 
         elif etype == "content_block_start":
             idx = int(getattr(event, "index", 0))
@@ -143,10 +151,16 @@ async def _process_raw_events(
             if b_kind == "text":
                 block_state[idx] = {"kind": "text"}
             elif b_kind == "tool_use":
+                tool_name = getattr(blk, "name", "") or ""
                 block_state[idx] = {
-                    "kind": "tool",
+                    # Native (server-side) tools surface alongside client
+                    # tools in the stream; tag the block so we can sort them
+                    # into separate buckets at finalize-time.
+                    "kind": "server_tool"
+                    if tool_name in NATIVE_TOOL_TYPES
+                    else "tool",
                     "id": getattr(blk, "id", "") or "",
-                    "name": getattr(blk, "name", "") or "",
+                    "name": tool_name,
                     "chunks": [],
                 }
 
@@ -178,9 +192,16 @@ async def _process_raw_events(
         elif etype == "message_delta":
             usage = getattr(event, "usage", None)
             if usage is not None:
+                # ``message_delta`` carries the cumulative usage roll-up;
+                # overwrite any partial figure from ``message_start``.
                 usage_dict = _usage_payload(usage)
+            delta_obj = getattr(event, "delta", None)
+            sr = getattr(delta_obj, "stop_reason", None) if delta_obj is not None else None
+            if sr:
+                stop_reason = str(sr)
 
     tool_calls_sorted: list[dict[str, Any]] = []
+    server_tool_calls_sorted: list[dict[str, Any]] = []
 
     def _numeric_index(key: Any) -> int:
         try:
@@ -190,15 +211,21 @@ async def _process_raw_events(
 
     for bi in sorted(block_state, key=_numeric_index):
         st = block_state[bi]
-        if str(st.get("kind", "")) == "tool":
+        kind = str(st.get("kind", ""))
+        if kind == "tool":
             tool_calls_sorted.append(_finalize_tool_state(st))
+        elif kind == "server_tool":
+            server_tool_calls_sorted.append(_finalize_tool_state(st))
 
     full_text = "".join(text_parts)
     md: dict[str, Any] = {
         "usage": usage_dict or {},
         "tool_calls": tool_calls_sorted,
+        "server_tool_calls": server_tool_calls_sorted,
         "response_id": response_id,
+        "request_id": response_id,  # alias for record_builders auto-discovery
         "model": model_label,
+        "stop_reason": stop_reason,
     }
     yield StreamEvent.complete_event(full_text, metadata=md)
 

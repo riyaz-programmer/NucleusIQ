@@ -6,6 +6,7 @@ import json
 import urllib.parse
 from typing import Any, cast
 
+from nucleusiq_anthropic.tools.anthropic_tool import is_native_marker
 from nucleusiq_anthropic.tools.converter import to_anthropic_tool_definition
 
 
@@ -273,8 +274,25 @@ def translate_messages(
 
 def flatten_tools(
     tool_specs: list[dict[str, Any]] | None,
+    *,
+    cache_tools: bool = False,
+    strict_tools: bool = False,
 ) -> list[dict[str, Any]] | None:
-    """Normalize tool definitions for ``client.messages.create``."""
+    """Normalize tool definitions for ``client.messages.create``.
+
+    Parameters
+    ----------
+    cache_tools:
+        When ``True`` and at least one tool definition will be emitted,
+        attach an Anthropic ``cache_control`` block to the **last**
+        definition.  Anthropic treats the prefix up to that point
+        (system + tool definitions before the breakpoint) as cacheable
+        for subsequent requests with the same prefix.
+    strict_tools:
+        When ``True``, set ``strict: True`` on each **custom** tool
+        definition.  Server-side / native tools are left untouched
+        (Anthropic does not currently accept ``strict`` on those).
+    """
     if not tool_specs:
         return None
 
@@ -282,11 +300,56 @@ def flatten_tools(
 
     for spec in tool_specs:
         if isinstance(spec, dict):
-            defs.append(to_anthropic_tool_definition(spec))
+            converted = to_anthropic_tool_definition(spec)
+            if strict_tools and not _is_native_wire(spec, converted):
+                converted = {**converted, "strict": True}
+            defs.append(converted)
         else:
             defs.append(spec)  # pragma: no cover — defensive path
 
+    if cache_tools and defs:
+        defs[-1] = _with_cache_control(defs[-1])
+
     return defs if defs else None
+
+
+def _is_native_wire(orig: dict[str, Any], converted: dict[str, Any]) -> bool:
+    """Whether *converted* is a Claude server-side (native) tool definition.
+
+    Considered "native" when (a) the original spec was an ``AnthropicTool``
+    marker, or (b) the converted ``type`` is a dated identifier (anything
+    other than the absence of ``type`` — custom tools omit it).
+    """
+    if is_native_marker(orig):
+        return True
+    ct = converted.get("type")
+    return isinstance(ct, str) and ct != "function" and ct.startswith(
+        ("web_search", "web_fetch", "code_execution")
+    )
+
+
+def _with_cache_control(tool_def: dict[str, Any]) -> dict[str, Any]:
+    """Return a copy of *tool_def* with an Anthropic ``cache_control`` block."""
+    return {**tool_def, "cache_control": {"type": "ephemeral"}}
+
+
+def system_with_cache(system: str | None, *, cache_system: bool) -> Any:
+    """Return the system parameter shape Anthropic expects.
+
+    Anthropic accepts either a plain string (legacy) or a list of
+    content blocks (required when ``cache_control`` is attached).
+    """
+    if not system:
+        return system
+    if not cache_system:
+        return system
+    return [
+        {
+            "type": "text",
+            "text": system,
+            "cache_control": {"type": "ephemeral"},
+        }
+    ]
 
 
 def anthropic_tool_choice(openai_tc: Any) -> dict[str, Any] | None:
@@ -316,7 +379,13 @@ def anthropic_tool_choice(openai_tc: Any) -> dict[str, Any] | None:
 
 
 def drop_unsupported_sampling(kwargs: dict[str, Any]) -> dict[str, Any]:
-    """Claude Messages does not honour OpenAI penalties — strip them from passthrough kwargs."""
+    """Claude Messages does not honour OpenAI penalties — strip them from passthrough kwargs.
+
+    Also strips the **private NucleusIQ Phase B markers** (``_cache_*``,
+    ``_strict_tools``, ``_disable_parallel_tool_use``).  Those are
+    interpreted by :func:`build_create_kwargs` before this function
+    runs; they must not reach ``messages.create``.
+    """
     out = dict(kwargs)
     for k in (
         "frequency_penalty",
@@ -332,6 +401,15 @@ def drop_unsupported_sampling(kwargs: dict[str, Any]) -> dict[str, Any]:
     for k in (
         "max_output_tokens",
         "response_format",
+    ):
+        out.pop(k, None)
+
+    # Phase B private markers (interpreted by build_create_kwargs upstream).
+    for k in (
+        "_cache_tools",
+        "_cache_system",
+        "_strict_tools",
+        "_disable_parallel_tool_use",
     ):
         out.pop(k, None)
 

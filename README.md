@@ -54,7 +54,14 @@
 
 ## ✨ What's New
 
-> **`nucleusiq` 0.7.11 + `nucleusiq-mcp` 0.1.0b1 (Beta)** — May 2026
+> **`nucleusiq` 0.7.12** — May 2026
+> Coordinated multi-package release promoting every alpha/beta provider to its first stable line:
+> **`nucleusiq-anthropic` 0.2.0 Stable** (Phase B feature-complete: native server tools, prompt caching, extended thinking, server-tool observability) ·
+> **`nucleusiq-ollama` 0.2.0 Stable** (vision wire + `provider="ollama"` enrichment) ·
+> **`nucleusiq-groq` 0.1.0 Stable** (hosted-tool observability stub + enrichment) ·
+> **`nucleusiq-mcp` 0.1.0 Stable** (drops `b1`; no API changes) ·
+> `nucleusiq-openai` 0.7.0 + `nucleusiq-gemini` 0.3.0 (native-tool observability + enrichment).
+> Plus cross-cutting **provider-agnostic native-tool observability** in core: `ToolCallRecord.executed_by ∈ {"local","provider"}`, `LLMCallRecord.provider / request_id / organization_id / stop_reason / cache_read_input_tokens / cache_creation_input_tokens / metadata`.
 >
 > - 🧩 **MCP Tool Adapter (Beta)** — Plug any [Model Context Protocol](https://modelcontextprotocol.io/) server (Slack, GitHub, Postgres, Stripe, …) into a NucleusIQ Agent in one line. Supports **stdio + Streamable HTTP + SSE**, **OAuth 2.1 / Bearer / Env** auth, graceful degradation, health checks, and full source-attributed tracing. 98.68% coverage, 235 unit + 13 live integration tests.
 > - 🪝 **Core `ExpandableTool` protocol** — Any tool factory (like `MCPTool`) can expand into many `BaseTool` instances during `Agent.initialize()` — without the core knowing what MCP is.
@@ -225,22 +232,22 @@ NucleusIQ ships as a **core framework + thin provider/tool packages**. Install o
 
 | Package | Status | Version | Description |
 |---|---|---|---|
-| [`nucleusiq-openai`](https://pypi.org/project/nucleusiq-openai/) | 🟢 Stable | `0.6.4` | OpenAI (gpt-4o, o-series); Responses API + Chat Completions; native `code_interpreter`, `file_search`, `web_search` |
-| [`nucleusiq-gemini`](https://pypi.org/project/nucleusiq-gemini/) | 🟢 Stable | `0.2.6` | Google Gemini; native Google Search, Code Execution, URL Context, Maps grounding |
-| [`nucleusiq-anthropic`](https://pypi.org/project/nucleusiq-anthropic/) | 🟠 Alpha | `0.1.0a1` | Anthropic Claude (Messages API); tools, streaming, prompt caching, extended thinking · [README](src/providers/llms/anthropic/README.md) |
+| [`nucleusiq-openai`](https://pypi.org/project/nucleusiq-openai/) | 🟢 Stable | `0.7.0` | OpenAI (gpt-4o, o-series); Responses API + Chat Completions; native `code_interpreter`, `file_search`, `web_search` — now surfaces `server_tool_calls` for tracer-side cost split |
+| [`nucleusiq-gemini`](https://pypi.org/project/nucleusiq-gemini/) | 🟢 Stable | `0.3.0` | Google Gemini; native Google Search + Code Execution emitted as `ToolCallRecord(executed_by="provider")`; URL Context, Maps grounding |
+| [`nucleusiq-anthropic`](https://pypi.org/project/nucleusiq-anthropic/) | 🟢 Stable | `0.2.0` | Anthropic Claude (Messages API); **native server tools** (`AnthropicTool.web_search()` / `web_fetch()` / `code_execution()` w/ auto-`anthropic-beta`), **prompt caching** (`cache_tools` / `cache_system`), **extended thinking** (`thinking="low"\|"medium"\|"high"\|"max"`), **server-tool observability** · [README](src/providers/llms/anthropic/README.md) |
 
 ### Inference Backends
 
 | Package | Status | Version | Description |
 |---|---|---|---|
-| [`nucleusiq-groq`](https://pypi.org/project/nucleusiq-groq/) | 🟡 Beta | `0.1.0b1` | Groq inference (Chat Completions) via official `groq` SDK · [README](src/providers/inference/groq/README.md) · [Design](docs/design/GROQ_PROVIDER.md) |
-| [`nucleusiq-ollama`](https://pypi.org/project/nucleusiq-ollama/) | 🟠 Alpha | `0.1.0a1` | Local/remote Ollama via official `ollama` SDK; structured output requires `nucleusiq>=0.7.10` · [README](src/providers/inference/ollama/README.md) · [Design](docs/design/OLLAMA_PROVIDER.md) |
+| [`nucleusiq-groq`](https://pypi.org/project/nucleusiq-groq/) | 🟢 Stable | `0.1.0` | Groq inference (Chat Completions) via official `groq` SDK; hosted-tool observability stub (`message.executed_tools` → `server_tool_calls`) · [README](src/providers/inference/groq/README.md) · [Design](docs/design/GROQ_PROVIDER.md) |
+| [`nucleusiq-ollama`](https://pypi.org/project/nucleusiq-ollama/) | 🟢 Stable | `0.2.0` | Local/remote Ollama via official `ollama` SDK; **vision wire** for OpenAI-style multimodal messages; structured output, `think` pass-through · [README](src/providers/inference/ollama/README.md) · [Design](docs/design/OLLAMA_PROVIDER.md) |
 
 ### Tool Adapters
 
 | Package | Status | Version | Description |
 |---|---|---|---|
-| [`nucleusiq-mcp`](https://pypi.org/project/nucleusiq-mcp/) | 🟡 Beta | `0.1.0b1` | **Model Context Protocol** adapter — turn any MCP server (Slack, GitHub, Postgres, Stripe, …) into NucleusIQ tools; stdio + Streamable HTTP + SSE; OAuth 2.1 / Bearer / Env auth · [README](src/providers/tools/mcp/README.md) · [Design](docs/design/MCP_INTEGRATION_DESIGN.md) |
+| [`nucleusiq-mcp`](https://pypi.org/project/nucleusiq-mcp/) | 🟢 Stable | `0.1.0` | **Model Context Protocol** adapter — turn any MCP server (Slack, GitHub, Postgres, Stripe, …) into NucleusIQ tools; stdio + Streamable HTTP + SSE; OAuth 2.1 / Bearer / Env auth · [README](src/providers/tools/mcp/README.md) · [Design](docs/design/MCP_INTEGRATION_DESIGN.md) |
 
 **Maturity legend:** 🟢 Stable (production-ready, SemVer guarantees) · 🟡 Beta (API stable, watching for adoption feedback) · 🟠 Alpha (functional, API may evolve)
 

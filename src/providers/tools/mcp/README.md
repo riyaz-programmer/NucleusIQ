@@ -8,8 +8,10 @@ Connect any MCP server (stdio, Streamable HTTP, SSE) as a NucleusIQ
 
 ## Status
 
-`0.1.0a1` — Alpha. The public API (`MCPTool`, `MCPAuth`, exceptions) is
-stable; lower-level types may evolve before `1.0.0`.
+**`0.1.0`** — **Development Status :: 5 - Production/Stable**. First stable
+line; no API changes from `0.1.0b1`. The public API (`MCPTool`, `MCPAuth`,
+exceptions) is now under semver; lower-level types may still evolve before
+`1.0.0`. Floor `nucleusiq>=0.7.12`. **248 tests passing.**
 
 ## Install
 

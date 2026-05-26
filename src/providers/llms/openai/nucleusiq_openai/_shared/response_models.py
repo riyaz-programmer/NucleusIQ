@@ -64,6 +64,24 @@ class _Choice(BaseModel):
     message: AssistantMessage
 
 
+class ServerToolCall(BaseModel):
+    """A native (server-executed) tool call surfaced by the Responses API.
+
+    The Responses API emits dedicated output items for hosted tools
+    (``web_search_call``, ``code_interpreter_call``, ``file_search_call``,
+    ``computer_use_call``, ``image_generation_call``).  These run on
+    OpenAI's infrastructure, not in the NucleusIQ agent loop, so we
+    surface them separately from ``tool_calls`` (which the agent loop
+    executes locally) so the tracer can emit
+    ``ToolCallRecord(executed_by="provider")`` for them.
+    """
+
+    id: str
+    name: str
+    input: dict[str, Any] = Field(default_factory=dict)
+    result: Any = None
+
+
 class _LLMResponse(BaseModel):
     """Normalised response from either Chat Completions or Responses API."""
 
@@ -74,3 +92,4 @@ class _LLMResponse(BaseModel):
     created: int | None = None
     service_tier: str | None = None
     system_fingerprint: str | None = None
+    server_tool_calls: list[ServerToolCall] = Field(default_factory=list)

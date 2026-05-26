@@ -24,6 +24,7 @@ from typing import Any
 
 import pytest
 from nucleusiq.tools import BaseTool
+
 from nucleusiq_openai import BaseOpenAI, OpenAITool
 from nucleusiq_openai.nb_openai.response_normalizer import (
     build_responses_text_config,
@@ -492,6 +493,62 @@ class TestNormalizeResponsesOutput:
         msg = result.choices[0].message
         assert msg.content is None
         assert msg.tool_calls is None
+
+    def test_native_tools_surface_as_server_tool_calls(self):
+        """``web_search_call`` / ``code_interpreter_call`` / ``file_search_call``
+        items are also surfaced on ``_LLMResponse.server_tool_calls`` so the
+        core agent loop can emit ``ToolCallRecord(executed_by="provider")``."""
+        resp = _MockResponse(
+            id="resp_native",
+            output=[
+                _MockOutputItem(
+                    "web_search_call",
+                    id="ws_1",
+                    status="completed",
+                    action={"type": "search", "query": "nucleusiq"},
+                ),
+                _MockOutputItem(
+                    "code_interpreter_call",
+                    id="ci_1",
+                    status="completed",
+                    output="42",
+                ),
+                _MockOutputItem(
+                    "file_search_call",
+                    id="fs_1",
+                    status="completed",
+                    queries=["doc1", "doc2"],
+                ),
+                _MockOutputItem(
+                    "message",
+                    role="assistant",
+                    content=[_MockContentBlock("output_text", "Done.")],
+                ),
+            ],
+        )
+
+        result = normalize_responses_output(resp)
+        names = [stc.name for stc in result.server_tool_calls]
+        assert names == ["web_search", "code_interpreter", "file_search"]
+        assert result.server_tool_calls[0].id == "ws_1"
+        assert result.server_tool_calls[1].result == "42"
+        # native_outputs still populated for back-compat
+        assert result.choices[0].message.native_outputs is not None
+        assert len(result.choices[0].message.native_outputs) == 3
+
+    def test_no_native_tools_leaves_server_tool_calls_empty(self):
+        resp = _MockResponse(
+            id="resp_no_native",
+            output=[
+                _MockOutputItem(
+                    "message",
+                    role="assistant",
+                    content=[_MockContentBlock("output_text", "Hi")],
+                )
+            ],
+        )
+        result = normalize_responses_output(resp)
+        assert result.server_tool_calls == []
 
 
 # ======================================================================== #

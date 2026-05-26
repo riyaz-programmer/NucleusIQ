@@ -26,4 +26,10 @@ See [OLLAMA_PROVIDER.md](https://github.com/nucleusbox/NucleusIQ/blob/main/docs/
 
 ## Status
 
-**0.1.0a1** — chat, streaming, tools, structured outputs (JSON schema / `format`), and `think` pass-through. Vision, embeddings, and web search are planned follow-ups.
+**0.2.0** — **Development Status :: 5 - Production/Stable**. First stable line.
+
+- **Chat + streaming + tools + structured outputs** (JSON schema / `format`) + `think` pass-through.
+- **Vision (image messages)** in the wire layer — OpenAI-style multimodal content lists with `image_url` parts whose URL is a `data:image/*;base64,...` data URL are converted to Ollama's `message.images` shape; HTTP(S) URLs are skipped with a warning (pre-encode them as data URLs to send images).
+- **Observability** — every Ollama LLM call now lands in `AgentResult.llm_calls` with `provider="ollama"` populated automatically by the core agent loop.
+- Floor `nucleusiq>=0.7.12`. **98 unit tests, coverage 99.85%** (gate ≥ 95%).
+- Embeddings + web search remain planned follow-ups for `0.2.x` / `0.3.x`.

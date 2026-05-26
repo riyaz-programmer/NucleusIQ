@@ -6,6 +6,7 @@ from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
+
 from nucleusiq_groq._shared.response_models import GroqLLMResponse
 from nucleusiq_groq.nb_groq.chat import create_chat_completion, normalize_chat_response
 
@@ -22,6 +23,57 @@ def test_normalize_chat_response_minimal() -> None:
     assert out.model == "llama-x"
     assert out.response_id == "resp-1"
     assert out.choices == []
+
+
+def test_normalize_chat_response_extracts_executed_tools() -> None:
+    """``message.executed_tools`` becomes ``server_tool_calls``.
+
+    Groq hosted/compound tools surface as ``executed_tools`` blocks on the
+    chat completion message.  The normalizer should split them out so the
+    core agent loop emits ``ToolCallRecord(executed_by="provider")``.
+    """
+    executed = [
+        SimpleNamespace(
+            id="exe_1",
+            type="web_search",
+            function=SimpleNamespace(
+                name="compound_web_search", arguments='{"q":"nucleusiq"}'
+            ),
+            output={"hits": 4},
+        ),
+        {
+            "id": "exe_2",
+            "type": "code_execution",
+            "function": {"name": "python", "arguments": '{"code":"1+1"}'},
+            "result": 2,
+        },
+        # An entry with neither id nor name should still produce a record
+        # with sensible defaults instead of crashing.
+        {"type": "executed_tool"},
+    ]
+    msg = SimpleNamespace(content="ok", tool_calls=None, executed_tools=executed)
+    ch = SimpleNamespace(message=msg)
+    raw = SimpleNamespace(choices=[ch], usage=None, model="m", id="r3")
+
+    out = normalize_chat_response(raw)
+    names = [stc.name for stc in out.server_tool_calls]
+    assert names == ["compound_web_search", "python", "executed_tool"]
+    assert out.server_tool_calls[0].id == "exe_1"
+    assert out.server_tool_calls[0].input == {"q": "nucleusiq"}
+    assert out.server_tool_calls[0].result == {"hits": 4}
+    assert out.server_tool_calls[1].input == {"code": "1+1"}
+    assert out.server_tool_calls[1].result == 2
+    # Fallback record uses positional id.
+    assert out.server_tool_calls[2].id == "groq_executed_3"
+    assert out.server_tool_calls[2].input == {}
+
+
+def test_normalize_chat_response_no_executed_tools_yields_empty_list() -> None:
+    msg = SimpleNamespace(content="hi", tool_calls=None)
+    ch = SimpleNamespace(message=msg)
+    raw = SimpleNamespace(choices=[ch], usage=None, model="m", id="r4")
+    out = normalize_chat_response(raw)
+    assert out.server_tool_calls == []
 
 
 def test_normalize_chat_response_with_message_and_usage() -> None:

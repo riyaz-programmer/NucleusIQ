@@ -20,6 +20,7 @@ from nucleusiq.agents.observability.protocol import ExecutionTracerProtocol
 from nucleusiq.agents.observability.record_builders import (
     build_llm_call_record,
     build_llm_call_record_from_stream,
+    build_server_tool_call_records,
     build_tool_call_record,
 )
 
@@ -30,4 +31,5 @@ __all__ = [
     "build_tool_call_record",
     "build_llm_call_record",
     "build_llm_call_record_from_stream",
+    "build_server_tool_call_records",
 ]

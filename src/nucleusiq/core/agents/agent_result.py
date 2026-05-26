@@ -40,7 +40,7 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 from enum import Enum
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -104,6 +104,12 @@ class ToolCallRecord(BaseModel):
     # Consumers can filter / group by this field; legacy tools and tracers
     # continue to work with ``source=None`` (backwards compatible).
     source: str | None = None
+    # Where this tool ran (since 0.7.12).  ``"local"`` (default) means the
+    # NucleusIQ agent loop dispatched and executed it; ``"provider"`` means
+    # the LLM provider executed it server-side (e.g. Anthropic ``web_search``,
+    # OpenAI ``code_interpreter``, Groq compound tools).  Consumers that
+    # report cost / latency split by surface should filter on this field.
+    executed_by: Literal["local", "provider"] = "local"
 
 
 class LLMCallRecord(BaseModel):
@@ -122,6 +128,22 @@ class LLMCallRecord(BaseModel):
     tool_call_count: int = 0
     duration_ms: float = 0.0
     prompt_technique: str | None = None
+    # Provider-side observability fields (additive since 0.7.12).
+    # Filled by record builders when the response carries the data;
+    # default-safe for providers that do not surface them yet.
+    provider: str | None = None
+    request_id: str | None = None
+    organization_id: str | None = None
+    stop_reason: str | None = None
+    # Prompt-cache accounting (Anthropic ``cache_read_input_tokens`` /
+    # ``cache_creation_input_tokens``; OpenAI ``cached_tokens``).  Zero when
+    # the call did not use caching.
+    cache_read_input_tokens: int = 0
+    cache_creation_input_tokens: int = 0
+    # Catch-all extension point so providers can surface bespoke
+    # observability (rate-limit headers, beta-header echoes, …) without
+    # bloating the schema.
+    metadata: dict[str, Any] = Field(default_factory=dict)
 
 
 class PluginEvent(BaseModel):

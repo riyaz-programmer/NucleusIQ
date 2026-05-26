@@ -69,17 +69,19 @@ asyncio.run(main())
 
 ---
 
-## Phase A (this beta)
+## Phase A (this stable line — `0.1.0`)
 
 - **`BaseGroq`** — `call` / `call_stream`, tool calling, structured output (`response_format` / Pydantic).
 - **`GroqLLMParams`** — typed, `extra="forbid"`; merges into provider calls.
 - **Local function tools** — OpenAI-style tool JSON; assistant `tool_calls` normalized for Groq before each request.
 - **Retries** — rate-limit and transient errors with exponential backoff; **429** + **`Retry-After`** on non-stream and **streaming open**; errors mapped to NucleusIQ `LLMError` types.
 - **Hosted tool IDs** — `nucleusiq_groq.tools.GROQ_COMPOUND_HOSTED_TOOL_IDS` / `GROQ_GPT_OSS_HOSTED_TOOL_IDS` mirror [Groq built-in docs](https://console.groq.com/docs/tool-use/built-in-tools) for reference only (**not** wired into `call` yet).
+- **Native-tool observability** — `GroqLLMResponse.server_tool_calls` is populated from `message.executed_tools` when Groq surfaces hosted/compound tool invocations on the chat completion. The core agent loop then auto-emits `ToolCallRecord(executed_by="provider")` so you can split local vs server cost / latency without provider-specific code. `LLMCallRecord.provider="groq"` is also populated automatically.
+- **Status & gates** — promoted from **Beta (`0.1.0b1`) → Stable (`0.1.0`)**; classifier `Development Status :: 5 - Production/Stable`; floor `nucleusiq>=0.7.12`. **79 unit tests, coverage 92.51%** (gate ≥ 90%).
 
 **Groq constraints you should respect:** per [Structured outputs](https://console.groq.com/docs/structured-outputs), **streaming** and **tool use** are not currently supported **with** Structured Outputs on the same request — use non-streaming `call` for `response_format`, or skip structured output when streaming / using tools.
 
-**Not in Phase A:** automatic pass-through for **`compound_custom`**, Groq **Responses API**, and **remote MCP** (see design doc Phase B).
+**Not in Phase A:** automatic pass-through for **`compound_custom`**, Groq **Responses API**, and **remote MCP** — these target Phase B (`nucleusiq-groq 0.2.x`); the observability surface is already wired so Phase B will not require further agent-loop changes.
 
 **Integration tests (optional):** from `src/providers/inference/groq`, with **`GROQ_API_KEY`** in the environment:
 

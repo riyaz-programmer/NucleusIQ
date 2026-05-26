@@ -31,8 +31,10 @@ from nucleusiq.agents.modes.tool_payload import tool_result_to_context_string
 from nucleusiq.agents.observability import (
     build_llm_call_record,
     build_llm_call_record_from_stream,
+    build_server_tool_call_records,
     build_tool_call_record,
 )
+from nucleusiq.agents.structured_output.resolver import get_provider_from_llm
 from nucleusiq.agents.task import Task
 from nucleusiq.agents.usage.usage_tracker import CallPurpose
 from nucleusiq.plugins.base import ModelRequest, ToolRequest
@@ -465,16 +467,23 @@ class BaseExecutionMode(ABC):
         if tracer is not None:
             model = call_kwargs.get("model") or getattr(response, "model", None)
             prompt_tech = _extract_prompt_technique(agent)
+            llm_round = len(tracer.llm_calls) + 1
             tracer.record_llm_call(
                 build_llm_call_record(
                     response,
-                    call_round=len(tracer.llm_calls) + 1,
+                    call_round=llm_round,
                     purpose=purpose.value,
                     duration_ms=duration_ms,
                     model=model,
                     prompt_technique=prompt_tech,
+                    provider=get_provider_from_llm(getattr(agent, "llm", None)),
                 )
             )
+            for stc in build_server_tool_call_records(
+                getattr(response, "server_tool_calls", None),
+                round=llm_round,
+            ):
+                tracer.record_tool_call(stc)
 
         return response
 
@@ -683,8 +692,14 @@ class BaseExecutionMode(ABC):
                         duration_ms=stream_duration_ms,
                         model=call_kwargs.get("model"),
                         prompt_technique=_extract_prompt_technique(agent),
+                        provider=get_provider_from_llm(getattr(agent, "llm", None)),
                     )
                 )
+                for stc in build_server_tool_call_records(
+                    (complete_event.metadata or {}).get("server_tool_calls"),
+                    round=call_round,
+                ):
+                    tracer.record_tool_call(stc)
 
             full_content = complete_event.content or ""
             raw_tool_calls = (complete_event.metadata or {}).get("tool_calls", [])
@@ -924,8 +939,14 @@ class BaseExecutionMode(ABC):
                                     duration_ms=synth_dur,
                                     model=synth_kwargs.get("model"),
                                     prompt_technique=_extract_prompt_technique(agent),
+                                    provider=get_provider_from_llm(getattr(agent, "llm", None)),
                                 )
                             )
+                            for stc in build_server_tool_call_records(
+                                (synth_event.metadata or {}).get("server_tool_calls"),
+                                round=call_round,
+                            ):
+                                synth_tracer.record_tool_call(stc)
                         synth_text = (synth_event.content or "").strip()
                         if synth_text:
                             messages.append(

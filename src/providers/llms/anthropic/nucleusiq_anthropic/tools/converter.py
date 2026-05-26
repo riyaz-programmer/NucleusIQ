@@ -4,24 +4,40 @@ from __future__ import annotations
 
 from typing import Any, cast
 
-# Phase A: empty — server-side tools (web_search, …) land in Phase C.
-NATIVE_TOOL_TYPES: frozenset[str] = frozenset()
+from nucleusiq_anthropic.tools.anthropic_tool import (
+    NATIVE_TOOL_TYPES,
+    is_native_marker,
+    marker_to_wire,
+)
 
 
 def to_anthropic_tool_definition(spec: dict[str, Any]) -> dict[str, Any]:
     """Map a generic ``BaseTool.get_spec()`` dict to Anthropic tool shape.
 
-    * **Native-style specs** containing ``input_schema`` and ``name``
-      — returned with only Anthropic-supported keys preserved.
-    * **OpenAI-style envelopes** ``type: function`` + nested ``function``
-      — unwrapped into ``name`` / ``description`` / ``input_schema``.
+    Handled cases (in priority order):
+
+    1. **NucleusIQ ``AnthropicTool.*()`` markers** — unwrapped via
+       :func:`marker_to_wire` into the dated ``{"type": "...20250305", ...}``
+       payload Anthropic expects.
+    2. **Native-style specs** already containing ``input_schema`` and ``name``
+       — returned with only Anthropic-supported keys preserved.
+    3. **OpenAI-style envelopes** ``type: function`` + nested ``function`` —
+       unwrapped into ``name`` / ``description`` / ``input_schema``.
+    4. **Raw server-tool dicts** with a non-``function`` ``type`` field —
+       passed through verbatim (advanced users opting out of the factory).
     """
 
+    # 1) NucleusIQ marker for built-in tools (preferred public path).
+    if is_native_marker(spec):
+        return marker_to_wire(spec)
+
     tool_type = spec.get("type")
-    # Pass through server/native tool payloads (Phase C+ — registry only today).
+
+    # 4) Pass through raw server / native tool payloads (advanced usage).
     if tool_type is not None and tool_type != "function":
         return dict(spec)
 
+    # 2) Native-style — already in (name, input_schema) form.
     if "input_schema" in spec:
         block: dict[str, Any] = {
             "name": spec["name"],
@@ -31,6 +47,7 @@ def to_anthropic_tool_definition(spec: dict[str, Any]) -> dict[str, Any]:
             block["description"] = spec["description"]
         return block
 
+    # 3) OpenAI-style ``{"type": "function", "function": {...}}`` envelope.
     fn = spec.get("function") if isinstance(spec.get("function"), dict) else None
     name = (fn.get("name") if fn else None) or spec.get("name", "")
     description = (fn.get("description") if fn else None) or spec.get(
@@ -61,10 +78,24 @@ def to_anthropic_tool_definition(spec: dict[str, Any]) -> dict[str, Any]:
 
 
 def spec_looks_native(spec: dict[str, Any]) -> bool:
-    """Whether *spec* is a server-side Claude tool marker (non-function)."""
+    """Whether *spec* is a server-side Claude tool marker (non-function).
+
+    Returns ``True`` for both **AnthropicTool markers** (``type ==
+    "anthropic_builtin"``) and **raw native specs** (``type`` matches one
+    of Anthropic's dated wire identifiers, e.g. ``web_search_20250305``).
+    """
+    if is_native_marker(spec):
+        return True
     t = spec.get("type")
     if t is None or t == "function":
         return False
-    if t == "anthropic_builtin":
-        return spec.get("name") in NATIVE_TOOL_TYPES
-    return t in NATIVE_TOOL_TYPES
+    # Raw native specs (advanced users) — ``type`` field carries the
+    # dated identifier; resolve to logical name via the suffix-strip
+    # pattern Anthropic uses for these tools.
+    if not isinstance(t, str):
+        return False
+    base = t.split("_2", 1)[0]
+    return base in NATIVE_TOOL_TYPES or spec.get("name") in NATIVE_TOOL_TYPES
+
+
+__all__ = ["NATIVE_TOOL_TYPES", "spec_looks_native", "to_anthropic_tool_definition"]

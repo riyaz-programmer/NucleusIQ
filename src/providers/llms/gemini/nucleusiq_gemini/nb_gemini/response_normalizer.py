@@ -18,6 +18,7 @@ from typing import Any
 from nucleusiq_gemini._shared.response_models import (
     AssistantMessage,
     GeminiLLMResponse,
+    ServerToolCall,
     ToolCall,
     ToolCallFunction,
     UsageInfo,
@@ -40,7 +41,12 @@ def normalize_response(raw_response: Any) -> GeminiLLMResponse:
     usage_meta = getattr(raw_response, "usage_metadata", None)
     model_version = getattr(raw_response, "model_version", None)
 
-    choices = [_normalize_candidate(c) for c in candidates]
+    choices: list[_Choice] = []
+    server_tool_calls: list[ServerToolCall] = []
+    for candidate in candidates:
+        choice, stcs = _normalize_candidate(candidate)
+        choices.append(choice)
+        server_tool_calls.extend(stcs)
     if not choices:
         choices = [_Choice(message=AssistantMessage(content=""))]
 
@@ -50,17 +56,26 @@ def normalize_response(raw_response: Any) -> GeminiLLMResponse:
         choices=choices,
         usage=usage,
         model=model_version,
+        server_tool_calls=server_tool_calls,
     )
 
 
-def _normalize_candidate(candidate: Any) -> _Choice:
-    """Convert a single Gemini candidate to a ``_Choice``."""
+def _normalize_candidate(candidate: Any) -> tuple[_Choice, list[ServerToolCall]]:
+    """Convert a single Gemini candidate to a ``_Choice``.
+
+    Returns the choice plus any **server-executed** tool calls inferred from
+    the candidate's parts (``executable_code`` + ``code_execution_result``
+    pairs become a ``code_execution`` server tool call; ``grounding_metadata``
+    becomes a ``google_search`` server tool call).
+    """
     content = getattr(candidate, "content", None)
     parts = getattr(content, "parts", None) or [] if content else []
 
     text_parts: list[str] = []
     tool_calls: list[ToolCall] = []
     native_outputs: list[dict[str, Any]] = []
+    pending_code: dict[str, Any] | None = None
+    server_tool_calls: list[ServerToolCall] = []
 
     for part in parts:
         thought = getattr(part, "thought", None)
@@ -78,22 +93,63 @@ def _normalize_candidate(candidate: Any) -> _Choice:
 
         executable_code = getattr(part, "executable_code", None)
         if executable_code:
-            native_outputs.append(
-                {
-                    "type": "code_execution",
-                    "code": getattr(executable_code, "code", ""),
-                    "language": getattr(executable_code, "language", "PYTHON"),
-                }
-            )
+            code_payload = {
+                "code": getattr(executable_code, "code", ""),
+                "language": getattr(executable_code, "language", "PYTHON"),
+            }
+            native_outputs.append({"type": "code_execution", **code_payload})
+            pending_code = code_payload
 
         code_result = getattr(part, "code_execution_result", None)
         if code_result:
-            native_outputs.append(
-                {
-                    "type": "code_execution_result",
-                    "output": getattr(code_result, "output", ""),
-                    "outcome": getattr(code_result, "outcome", "OUTCOME_OK"),
-                }
+            result_payload = {
+                "output": getattr(code_result, "output", ""),
+                "outcome": getattr(code_result, "outcome", "OUTCOME_OK"),
+            }
+            native_outputs.append({"type": "code_execution_result", **result_payload})
+            server_tool_calls.append(
+                ServerToolCall(
+                    id=f"gemini_code_exec_{len(server_tool_calls) + 1}",
+                    name="code_execution",
+                    input=pending_code or {},
+                    result=result_payload,
+                )
+            )
+            pending_code = None
+
+    # An ``executable_code`` part without a paired ``code_execution_result``
+    # still represents a server-executed invocation (model emitted code that
+    # the tool sandbox ran).
+    if pending_code is not None:
+        server_tool_calls.append(
+            ServerToolCall(
+                id=f"gemini_code_exec_{len(server_tool_calls) + 1}",
+                name="code_execution",
+                input=pending_code,
+                result=None,
+            )
+        )
+
+    grounding = getattr(candidate, "grounding_metadata", None)
+    if grounding is not None:
+        try:
+            grounding_payload: Any = (
+                grounding.model_dump()
+                if hasattr(grounding, "model_dump")
+                else dict(grounding)
+                if isinstance(grounding, dict)
+                else {}
+            )
+        except Exception:
+            grounding_payload = {}
+        if grounding_payload:
+            server_tool_calls.append(
+                ServerToolCall(
+                    id=f"gemini_google_search_{len(server_tool_calls) + 1}",
+                    name="google_search",
+                    input={},
+                    result=grounding_payload,
+                )
             )
 
     combined_text = "".join(text_parts) if text_parts else None
@@ -103,7 +159,7 @@ def _normalize_candidate(candidate: Any) -> _Choice:
         tool_calls=tool_calls if tool_calls else None,
         native_outputs=native_outputs if native_outputs else None,
     )
-    return _Choice(message=message)
+    return _Choice(message=message), server_tool_calls
 
 
 def _normalize_function_call(fn_call: Any) -> ToolCall:

@@ -21,6 +21,7 @@ from util_env import load_repo_dotenv  # noqa: E402
 load_repo_dotenv()
 
 from nucleusiq.streaming.events import StreamEventType  # noqa: E402
+
 from nucleusiq_anthropic import BaseAnthropic  # noqa: E402
 
 

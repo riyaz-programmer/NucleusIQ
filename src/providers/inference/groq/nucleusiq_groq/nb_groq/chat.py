@@ -8,6 +8,7 @@ from typing import Any
 from nucleusiq_groq._shared.response_models import (
     AssistantMessage,
     GroqLLMResponse,
+    ServerToolCall,
     ToolCall,
     ToolCallFunction,
     UsageInfo,
@@ -19,9 +20,85 @@ from nucleusiq_groq._shared.wire import build_chat_completion_payload
 logger = logging.getLogger(__name__)
 
 
+def _extract_server_tool_calls(message: Any) -> list[ServerToolCall]:
+    """Extract Groq hosted-tool invocations from a chat completion message.
+
+    Groq exposes hosted/compound tools via ``message.executed_tools`` —
+    a list of OpenAI-style ``{type, function, ...}`` blocks where the
+    function metadata describes what ran server-side (compound search,
+    code execution, MCP, browser automation, …).  Phase A keeps this
+    extractor minimal-cost: when ``executed_tools`` is absent or empty
+    we return ``[]``; when present we surface every entry so the core
+    agent loop emits ``ToolCallRecord(executed_by="provider")``.
+    """
+    raw_executed = getattr(message, "executed_tools", None)
+    if not raw_executed:
+        return []
+    out: list[ServerToolCall] = []
+    for idx, et in enumerate(raw_executed):
+        out.append(_one_executed_tool_to_record(et, idx))
+    return out
+
+
+def _read_executed_field(payload: dict[str, Any], item: Any, key: str) -> Any:
+    """Read ``key`` from a dict payload, falling back to ``item`` attributes."""
+    if isinstance(payload, dict) and payload.get(key) is not None:
+        return payload[key]
+    return getattr(item, key, None)
+
+
+def _one_executed_tool_to_record(et: Any, idx: int) -> ServerToolCall:
+    """Convert one Groq ``executed_tools`` entry to a :class:`ServerToolCall`."""
+    if isinstance(et, dict):
+        payload: dict[str, Any] = dict(et)
+    elif hasattr(et, "model_dump"):
+        try:
+            dumped = et.model_dump()
+            payload = dict(dumped) if isinstance(dumped, dict) else {}
+        except Exception:
+            payload = {}
+    else:
+        payload = {}
+
+    fn_meta = _read_executed_field(payload, et, "function")
+    if isinstance(fn_meta, dict):
+        name = fn_meta.get("name") or _read_executed_field(payload, et, "type") or "executed_tool"
+        input_payload: Any = fn_meta.get("arguments")
+    elif fn_meta is not None:
+        name = (
+            getattr(fn_meta, "name", None)
+            or _read_executed_field(payload, et, "type")
+            or "executed_tool"
+        )
+        input_payload = getattr(fn_meta, "arguments", None)
+    else:
+        name = _read_executed_field(payload, et, "type") or "executed_tool"
+        input_payload = None
+
+    if isinstance(input_payload, str):
+        try:
+            import json as _json
+
+            parsed_input = _json.loads(input_payload)
+            input_payload = parsed_input if isinstance(parsed_input, dict) else {}
+        except Exception:
+            input_payload = {"arguments": input_payload}
+    elif not isinstance(input_payload, dict):
+        input_payload = {}
+
+    return ServerToolCall(
+        id=str(_read_executed_field(payload, et, "id") or f"groq_executed_{idx + 1}"),
+        name=str(name or "executed_tool"),
+        input=input_payload,
+        result=_read_executed_field(payload, et, "output")
+        or _read_executed_field(payload, et, "result"),
+    )
+
+
 def normalize_chat_response(raw: Any) -> GroqLLMResponse:
     """Map an OpenAI SDK chat completion object to :class:`GroqLLMResponse`."""
     choices_out: list[_Choice] = []
+    server_tool_calls: list[ServerToolCall] = []
     choices_raw = getattr(raw, "choices", None) or []
     for ch in choices_raw:
         msg = getattr(ch, "message", None)
@@ -46,6 +123,7 @@ def normalize_chat_response(raw: Any) -> GroqLLMResponse:
                         ),
                     )
                 )
+        server_tool_calls.extend(_extract_server_tool_calls(msg))
         choices_out.append(
             _Choice(
                 message=AssistantMessage(
@@ -73,6 +151,7 @@ def normalize_chat_response(raw: Any) -> GroqLLMResponse:
         usage=usage_out,
         model=getattr(raw, "model", None),
         response_id=getattr(raw, "id", None),
+        server_tool_calls=server_tool_calls,
     )
 
 
