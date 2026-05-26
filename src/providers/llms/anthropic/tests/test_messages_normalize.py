@@ -99,6 +99,7 @@ def test_normalize_json_dump_failure(monkeypatch) -> None:
 def test_normalize_server_tool_use_and_per_tool_result_block() -> None:
     """``server_tool_use`` + ``code_execution_tool_result`` flow surfaces a
     populated :class:`ServerToolCall` with id, name, input and result."""
+
     def tb(**kw: object) -> SimpleNamespace:
         return SimpleNamespace(**kw)
 

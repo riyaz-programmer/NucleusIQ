@@ -323,8 +323,10 @@ def _is_native_wire(orig: dict[str, Any], converted: dict[str, Any]) -> bool:
     if is_native_marker(orig):
         return True
     ct = converted.get("type")
-    return isinstance(ct, str) and ct != "function" and ct.startswith(
-        ("web_search", "web_fetch", "code_execution")
+    return (
+        isinstance(ct, str)
+        and ct != "function"
+        and ct.startswith(("web_search", "web_fetch", "code_execution"))
     )
 
 

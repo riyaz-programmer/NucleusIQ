@@ -63,8 +63,10 @@ async def _run_web_search(llm: BaseAnthropic) -> None:
     for stc in result.server_tool_calls:
         print(f"  - {stc.name:<16} id={stc.id}")
     print(f"stop_reason: {result.stop_reason}")
-    print(f"usage: prompt={result.usage.prompt_tokens if result.usage else 0} "
-          f"completion={result.usage.completion_tokens if result.usage else 0}")
+    print(
+        f"usage: prompt={result.usage.prompt_tokens if result.usage else 0} "
+        f"completion={result.usage.completion_tokens if result.usage else 0}"
+    )
     print()
 
 

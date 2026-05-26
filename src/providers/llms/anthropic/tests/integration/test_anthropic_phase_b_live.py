@@ -192,9 +192,7 @@ async def test_live_prompt_caching_reads_cache_on_second_call(
     cache_creation = (
         r1.usage.cache_creation_input_tokens + r2.usage.cache_creation_input_tokens
     )
-    cache_read = (
-        r1.usage.cache_read_input_tokens + r2.usage.cache_read_input_tokens
-    )
+    cache_read = r1.usage.cache_read_input_tokens + r2.usage.cache_read_input_tokens
     assert cache_creation + cache_read > 0, (
         "Expected at least one prompt-cache event across two calls — "
         f"r1.usage={r1.usage.model_dump()} r2.usage={r2.usage.model_dump()}"

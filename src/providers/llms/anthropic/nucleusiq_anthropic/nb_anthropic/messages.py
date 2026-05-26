@@ -209,7 +209,11 @@ def _extract_organization_id(raw: Any) -> str | None:
     response = getattr(raw, "response", None)
     headers = getattr(response, "headers", None) if response is not None else None
     if headers is not None:
-        val = headers.get("anthropic-organization-id") if hasattr(headers, "get") else None
+        val = (
+            headers.get("anthropic-organization-id")
+            if hasattr(headers, "get")
+            else None
+        )
         if isinstance(val, str) and val.strip():
             return val.strip()
     return None

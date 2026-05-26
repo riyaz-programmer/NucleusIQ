@@ -49,13 +49,12 @@ def _item_to_server_tool_call(item: Any) -> ServerToolCall | None:
         raw = item.model_dump() if hasattr(item, "model_dump") else dict(item)
     except Exception:
         raw = {}
-    item_type = (
-        getattr(item, "type", None) or (raw.get("type") if raw else None) or ""
-    )
+    item_type = getattr(item, "type", None) or (raw.get("type") if raw else None) or ""
     tool_id = getattr(item, "id", None) or (raw.get("id") if raw else None) or ""
     # Strip the trailing "_call" so the surface matches Anthropic's
     # ``web_search`` / ``code_execution`` naming where possible.
     name = item_type[: -len("_call")] if item_type.endswith("_call") else item_type
+
     def _read(key: str) -> Any:
         if isinstance(raw, dict) and raw.get(key) is not None:
             return raw[key]
@@ -82,6 +81,7 @@ def _item_to_server_tool_call(item: Any) -> ServerToolCall | None:
         input=input_payload,
         result=result,
     )
+
 
 InputItem = MessageInputItem | FunctionCallInput | FunctionCallOutput
 

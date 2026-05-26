@@ -16,9 +16,9 @@ and collects required beta headers for.
 The marker dict shape::
 
     {
-        "type": "anthropic_builtin",   # NucleusIQ marker (NOT Anthropic's wire shape)
-        "name": "web_search",           # one of NATIVE_TOOL_TYPES
-        "params": {...},                # tool-specific configuration
+        "type": "anthropic_builtin",  # NucleusIQ marker (NOT Anthropic's wire shape)
+        "name": "web_search",  # one of NATIVE_TOOL_TYPES
+        "params": {...},  # tool-specific configuration
     }
 
 ``to_anthropic_tool_definition`` (in :mod:`nucleusiq_anthropic.tools.converter`)

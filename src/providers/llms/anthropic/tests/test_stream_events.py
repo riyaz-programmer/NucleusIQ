@@ -74,7 +74,9 @@ async def test_process_raw_events_token_and_tool() -> None:
 
 
 @pytest.mark.asyncio
-async def test_process_raw_events_separates_server_tools_and_surfaces_metadata() -> None:
+async def test_process_raw_events_separates_server_tools_and_surfaces_metadata() -> (
+    None
+):
     """0.2.0 — server-side tools land in ``server_tool_calls``; stop_reason +
     cache tokens + request_id are surfaced in the COMPLETE metadata."""
 
@@ -104,9 +106,7 @@ async def test_process_raw_events_separates_server_tools_and_surfaces_metadata()
         SimpleNamespace(
             type="content_block_delta",
             index=1,
-            delta=SimpleNamespace(
-                type="input_json_delta", partial_json='{"q":"x"}'
-            ),
+            delta=SimpleNamespace(type="input_json_delta", partial_json='{"q":"x"}'),
         ),
         # Client-side tool — should remain in tool_calls.
         SimpleNamespace(
@@ -119,9 +119,7 @@ async def test_process_raw_events_separates_server_tools_and_surfaces_metadata()
         SimpleNamespace(
             type="content_block_delta",
             index=2,
-            delta=SimpleNamespace(
-                type="input_json_delta", partial_json='{"id":1}'
-            ),
+            delta=SimpleNamespace(type="input_json_delta", partial_json='{"id":1}'),
         ),
         SimpleNamespace(
             type="message_delta",

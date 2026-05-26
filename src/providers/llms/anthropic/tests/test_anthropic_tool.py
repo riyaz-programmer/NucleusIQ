@@ -30,9 +30,10 @@ from nucleusiq_anthropic.tools import (
 
 class TestAnthropicToolFactory:
     def test_native_registry_membership(self) -> None:
-        assert frozenset(
-            {"web_search", "web_fetch", "code_execution"}
-        ) == NATIVE_TOOL_TYPES
+        assert (
+            frozenset({"web_search", "web_fetch", "code_execution"})
+            == NATIVE_TOOL_TYPES
+        )
         assert AnthropicTool.NATIVE_TOOL_TYPES == NATIVE_TOOL_TYPES
 
     def test_wire_types_map_covers_every_native_tool(self) -> None:
@@ -180,9 +181,7 @@ class TestBuildCreateKwargs:
         assert len(tools) == 1
         assert tools[0]["type"] == NATIVE_TOOL_WIRE_TYPES["web_fetch"]
         # Auto-collected beta header surfaced on extra_headers.
-        assert (
-            kw["extra_headers"]["anthropic-beta"] == "web-fetch-2025-09-10"
-        )
+        assert kw["extra_headers"]["anthropic-beta"] == "web-fetch-2025-09-10"
 
     def test_native_tool_beta_merges_with_user_beta(self) -> None:
         kw = build_create_kwargs(

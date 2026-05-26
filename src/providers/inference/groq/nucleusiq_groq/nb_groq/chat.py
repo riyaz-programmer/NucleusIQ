@@ -62,7 +62,11 @@ def _one_executed_tool_to_record(et: Any, idx: int) -> ServerToolCall:
 
     fn_meta = _read_executed_field(payload, et, "function")
     if isinstance(fn_meta, dict):
-        name = fn_meta.get("name") or _read_executed_field(payload, et, "type") or "executed_tool"
+        name = (
+            fn_meta.get("name")
+            or _read_executed_field(payload, et, "type")
+            or "executed_tool"
+        )
         input_payload: Any = fn_meta.get("arguments")
     elif fn_meta is not None:
         name = (

@@ -156,9 +156,7 @@ async def _process_raw_events(
                     # Native (server-side) tools surface alongside client
                     # tools in the stream; tag the block so we can sort them
                     # into separate buckets at finalize-time.
-                    "kind": "server_tool"
-                    if tool_name in NATIVE_TOOL_TYPES
-                    else "tool",
+                    "kind": "server_tool" if tool_name in NATIVE_TOOL_TYPES else "tool",
                     "id": getattr(blk, "id", "") or "",
                     "name": tool_name,
                     "chunks": [],
@@ -196,7 +194,11 @@ async def _process_raw_events(
                 # overwrite any partial figure from ``message_start``.
                 usage_dict = _usage_payload(usage)
             delta_obj = getattr(event, "delta", None)
-            sr = getattr(delta_obj, "stop_reason", None) if delta_obj is not None else None
+            sr = (
+                getattr(delta_obj, "stop_reason", None)
+                if delta_obj is not None
+                else None
+            )
             if sr:
                 stop_reason = str(sr)
 

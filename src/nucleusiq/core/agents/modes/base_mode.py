@@ -939,7 +939,9 @@ class BaseExecutionMode(ABC):
                                     duration_ms=synth_dur,
                                     model=synth_kwargs.get("model"),
                                     prompt_technique=_extract_prompt_technique(agent),
-                                    provider=get_provider_from_llm(getattr(agent, "llm", None)),
+                                    provider=get_provider_from_llm(
+                                        getattr(agent, "llm", None)
+                                    ),
                                 )
                             )
                             for stc in build_server_tool_call_records(
