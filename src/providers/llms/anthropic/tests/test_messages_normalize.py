@@ -5,7 +5,6 @@ from __future__ import annotations
 from types import SimpleNamespace
 
 from anthropic import NOT_GIVEN
-
 from nucleusiq_anthropic.nb_anthropic.messages import (
     build_create_kwargs,
     normalize_message_response,

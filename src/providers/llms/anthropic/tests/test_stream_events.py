@@ -5,7 +5,6 @@ from __future__ import annotations
 from types import SimpleNamespace
 
 import pytest
-
 from nucleusiq_anthropic.nb_anthropic.stream_adapter import _process_raw_events
 
 

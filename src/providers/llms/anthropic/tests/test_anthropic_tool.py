@@ -6,7 +6,6 @@ from types import SimpleNamespace
 from unittest.mock import AsyncMock
 
 import pytest
-
 from nucleusiq_anthropic.llm_params import AnthropicLLMParams
 from nucleusiq_anthropic.nb_anthropic.base import BaseAnthropic
 from nucleusiq_anthropic.nb_anthropic.messages import (

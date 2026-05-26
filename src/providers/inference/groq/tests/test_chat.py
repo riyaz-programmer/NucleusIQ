@@ -6,7 +6,6 @@ from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
-
 from nucleusiq_groq._shared.response_models import GroqLLMResponse
 from nucleusiq_groq.nb_groq.chat import create_chat_completion, normalize_chat_response
 
