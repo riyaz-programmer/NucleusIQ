@@ -1,5 +1,9 @@
 # nucleusiq-anthropic
 
+[![PyPI version](https://img.shields.io/pypi/v/nucleusiq-anthropic?color=brightgreen)](https://pypi.org/project/nucleusiq-anthropic/)
+[![PyPI downloads](https://img.shields.io/pypi/dm/nucleusiq-anthropic?label=downloads%2Fmonth)](https://pypistats.org/packages/nucleusiq-anthropic)
+[![Python versions](https://img.shields.io/pypi/pyversions/nucleusiq-anthropic)](https://pypi.org/project/nucleusiq-anthropic/)
+
 **Anthropic Claude** provider for [NucleusIQ](https://github.com/nucleusbox/NucleusIQ): native **Messages API** via the official **`anthropic`** Python SDK (`AsyncAnthropic` / `Anthropic`), with message wiring, custom tools, retries, and streaming mapped to **`StreamEvent`**.
 
 ## Release status
@@ -13,7 +17,7 @@
 | **Live integration tests** | `tests/integration/test_anthropic_phase_b_live.py` — 6 tests (`-m integration`, requires `ANTHROPIC_API_KEY`): web_search, code_execution, prompt caching, extended thinking ×2 (low/medium), `disable_parallel_tool_use`. Skips cleanly if the chosen model is not available on the active API key. Excluded from default + CI runs. |
 | **Deferred** | Phase C (Memory / `computer_use` / `bash`) — targets `nucleusiq-anthropic 0.3.x`. |
 
-Full roadmap: [`docs/design/ANTHROPIC_PROVIDER.md`](../../../../docs/design/ANTHROPIC_PROVIDER.md).
+User guide and roadmap: [Anthropic provider guide](https://nucleusbox.github.io/nucleusiq-docs/python/nucleusiq/guides/anthropic-provider/).
 
 ---
 

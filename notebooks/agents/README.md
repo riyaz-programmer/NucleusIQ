@@ -16,7 +16,6 @@ Chair allocates **$500K–$1M** across **TCS vs HCL** using **FY2025 reports onl
 | Resource | Purpose |
 |----------|---------|
 | [devils_advocate_showcase.ipynb](investment_board_devils_advocate/notebooks/devils_advocate_showcase.ipynb) | **Start here** — one notebook: data prep + chat |
-| [Use-case spec](../../docs/use-cases/investment-board-devils-advocate-agent.md) | Requirements |
 
 ## How to Run
 

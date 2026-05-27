@@ -1,5 +1,9 @@
 # nucleusiq-mcp
 
+[![PyPI version](https://img.shields.io/pypi/v/nucleusiq-mcp?color=brightgreen)](https://pypi.org/project/nucleusiq-mcp/)
+[![PyPI downloads](https://img.shields.io/pypi/dm/nucleusiq-mcp?label=downloads%2Fmonth)](https://pypistats.org/packages/nucleusiq-mcp)
+[![Python versions](https://img.shields.io/pypi/pyversions/nucleusiq-mcp)](https://pypi.org/project/nucleusiq-mcp/)
+
 **Model Context Protocol (MCP) adapter for the [NucleusIQ](https://github.com/nucleusbox/NucleusIQ) AI agent framework.**
 
 Connect any MCP server (stdio, Streamable HTTP, SSE) as a NucleusIQ

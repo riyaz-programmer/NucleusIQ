@@ -1,10 +1,14 @@
 # nucleusiq-groq
 
+[![PyPI version](https://img.shields.io/pypi/v/nucleusiq-groq?color=brightgreen)](https://pypi.org/project/nucleusiq-groq/)
+[![PyPI downloads](https://img.shields.io/pypi/dm/nucleusiq-groq?label=downloads%2Fmonth)](https://pypistats.org/packages/nucleusiq-groq)
+[![Python versions](https://img.shields.io/pypi/pyversions/nucleusiq-groq)](https://pypi.org/project/nucleusiq-groq/)
+
 **Groq inference provider** for [NucleusIQ](https://github.com/nucleusbox/NucleusIQ): Chat Completions via Groq’s **OpenAI-compatible** API, using Groq’s official **`groq`** Python SDK (`AsyncGroq` / `Groq`).
 
-**Status:** **0.1.0b1** (public **beta** / pre-release). Requires **`nucleusiq>=0.7.9`**.
+**Status:** **0.1.0** — **Development Status :: 5 - Production/Stable**. Requires **`nucleusiq>=0.7.12`**.
 
-Design, phased roadmap (Phase A vs B), and API caveats: [`docs/design/GROQ_PROVIDER.md`](../../../../docs/design/GROQ_PROVIDER.md) (repo root).
+User guide, capability matrix, and API caveats: [Groq provider guide](https://nucleusbox.github.io/nucleusiq-docs/python/nucleusiq/guides/groq-provider/).
 
 ---
 

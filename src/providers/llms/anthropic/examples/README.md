@@ -35,7 +35,7 @@ Use **`LLMParams`** on **`AgentConfig.llm_params`** for sampling. Use **`Anthrop
 
 If you see **`404 model`** / **`model not_found_error`**, your key/org may not have the default Messages model. Run **09**, copy a printed **`id`**, and export **`ANTHROPIC_MODEL=<id>`**.
 
-**Note:** Anthropic alpha has **empty** **`NATIVE_TOOL_TYPES`** — there is **no** `OpenAITool`-style factory for Claude **server-side** tools yet (`web_search`, etc.). That lands in Phase B/C per `docs/design/ANTHROPIC_PROVIDER.md`.
+**Note:** Native Claude server-side tools are now documented in the [Anthropic provider guide](https://nucleusbox.github.io/nucleusiq-docs/python/nucleusiq/guides/anthropic-provider/).
 
 ## Run
 

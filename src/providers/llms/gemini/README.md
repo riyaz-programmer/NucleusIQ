@@ -1,5 +1,9 @@
 # nucleusiq-gemini
 
+[![PyPI version](https://img.shields.io/pypi/v/nucleusiq-gemini?color=brightgreen)](https://pypi.org/project/nucleusiq-gemini/)
+[![PyPI downloads](https://img.shields.io/pypi/dm/nucleusiq-gemini?label=downloads%2Fmonth)](https://pypistats.org/packages/nucleusiq-gemini)
+[![Python versions](https://img.shields.io/pypi/pyversions/nucleusiq-gemini)](https://pypi.org/project/nucleusiq-gemini/)
+
 Google Gemini provider for the [NucleusIQ](https://github.com/nucleusbox/NucleusIQ) AI agent framework.
 
 ## Installation

@@ -45,4 +45,4 @@ uv run python examples/agents/07_groq_stream_live.py
 | `06` | — | **Hosted built-in tools** — prints `GROQ_*_HOSTED_TOOL_IDS` vs local tools (no API call); Phase B wiring |
 | `07` | — | **Streaming** — `BaseGroq.call_stream` live smoke |
 
-**Built-in tools** (Groq-hosted web search, compound models, MCP, etc.) are **not** wired in Phase A / public beta; use **local function calling**. See `docs/design/GROQ_PROVIDER.md`. Scripts `01` through `05` and `07` exercise real API calls.
+**Built-in tools** (Groq-hosted web search, compound models, MCP, etc.) are not exposed as local function tools; use local function calling for tool examples. See the [Groq provider guide](https://nucleusbox.github.io/nucleusiq-docs/python/nucleusiq/guides/groq-provider/). Scripts `01` through `05` and `07` exercise real API calls.

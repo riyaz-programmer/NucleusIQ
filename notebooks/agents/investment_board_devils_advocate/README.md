@@ -44,4 +44,3 @@ jupyter notebook notebooks/devils_advocate_showcase.ipynb
 
 - [PACK_CONTENTS.md](PACK_CONTENTS.md) — pack blocks and `section_id`s
 - [SOURCES.md](SOURCES.md) — PDF paths
-- [Use-case spec](../../docs/use-cases/investment-board-devils-advocate-agent.md)

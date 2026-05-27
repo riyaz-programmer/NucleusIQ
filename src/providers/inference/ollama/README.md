@@ -1,10 +1,14 @@
 # nucleusiq-ollama
 
-Alpha provider for running **NucleusIQ** agents against [Ollama](https://docs.ollama.com/) (local or hosted).
+[![PyPI version](https://img.shields.io/pypi/v/nucleusiq-ollama?color=brightgreen)](https://pypi.org/project/nucleusiq-ollama/)
+[![PyPI downloads](https://img.shields.io/pypi/dm/nucleusiq-ollama?label=downloads%2Fmonth)](https://pypistats.org/packages/nucleusiq-ollama)
+[![Python versions](https://img.shields.io/pypi/pyversions/nucleusiq-ollama)](https://pypi.org/project/nucleusiq-ollama/)
+
+Stable provider for running **NucleusIQ** agents against [Ollama](https://docs.ollama.com/) (local or hosted).
 
 ## Install
 
-**Alpha** on PyPI (**`0.1.0a1`**). Requires **`nucleusiq>=0.7.10`** (pulled in automatically by `pip`).
+**0.2.0** — **Development Status :: 5 - Production/Stable**. Requires **`nucleusiq>=0.7.12`** (pulled in automatically by `pip`).
 
 ```bash
 pip install nucleusiq-ollama
@@ -22,7 +26,7 @@ llm = BaseOllama(model_name="llama3.2", llm_params=OllamaLLMParams(think=True))
 
 Runnable scripts (smoke, Agent DIRECT, streaming) live under **`examples/`** — see [`examples/README.md`](examples/README.md).
 
-See [OLLAMA_PROVIDER.md](https://github.com/nucleusbox/NucleusIQ/blob/main/docs/design/OLLAMA_PROVIDER.md) for capability matrix, environment variables, and roadmap.
+See the [Ollama provider guide](https://nucleusbox.github.io/nucleusiq-docs/python/nucleusiq/guides/ollama-provider/) for capability matrix, environment variables, and roadmap.
 
 ## Status
 

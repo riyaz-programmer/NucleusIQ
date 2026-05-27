@@ -1,5 +1,9 @@
 # NucleusIQ
 
+[![PyPI version](https://img.shields.io/pypi/v/nucleusiq?color=brightgreen)](https://pypi.org/project/nucleusiq/)
+[![PyPI downloads](https://img.shields.io/pypi/dm/nucleusiq?label=downloads%2Fmonth)](https://pypistats.org/packages/nucleusiq)
+[![Python versions](https://img.shields.io/pypi/pyversions/nucleusiq)](https://pypi.org/project/nucleusiq/)
+
 **Core package** for the NucleusIQ AI agent framework.
 
 Includes agents, prompts, tools, and utilities.
