@@ -1,0 +1,29 @@
+Aurora Retail Systems is a fictional mid-market commerce platform used by regional retailers to manage inventory, loyalty, pricing, and store operations.
+
+Useful facts:
+- Aurora serves 420 retail locations across 7 countries.
+- The platform processes roughly 38 million basket events per month.
+- The company is migrating customers from a legacy on-prem deployment to a managed cloud product.
+- Management claims the cloud product reduces customer infrastructure cost by 18% to 24%.
+- The sales team says the migration creates a strong expansion opportunity because analytics and loyalty modules attach well after cloud migration.
+- The support team reports the migration has created temporary onboarding friction for stores with custom POS integrations.
+
+Business model:
+- Subscription revenue is priced per store plus usage-based event processing.
+- Professional services revenue is still high because custom integrations remain common.
+- Management wants professional services to fall below 18% of revenue within 12 months.
+- Cloud gross margin is expected to improve once three expensive single-tenant customers move to shared infrastructure.
+
+Repeated noise block:
+The following paragraph is intentionally repeated to simulate noisy tool output. Do not treat repetition as independent evidence. This paragraph exists only to increase context pressure and test whether an agent can separate useful evidence from repeated content. Aurora uses dashboards, tickets, migrations, onboarding, pricing, integrations, dashboards, tickets, migrations, onboarding, pricing, integrations.
+
+Repeated noise block:
+The following paragraph is intentionally repeated to simulate noisy tool output. Do not treat repetition as independent evidence. This paragraph exists only to increase context pressure and test whether an agent can separate useful evidence from repeated content. Aurora uses dashboards, tickets, migrations, onboarding, pricing, integrations, dashboards, tickets, migrations, onboarding, pricing, integrations.
+
+Potential signal:
+- The CEO says churn is "stable," but the customer success notes show elevated churn risk among smaller retailers.
+- Three enterprise customers expanded usage after cloud migration.
+- Two regional customers delayed migration because their custom POS connectors failed certification.
+
+Analyst note:
+The main question is whether Aurora is becoming a scalable SaaS business or remaining a services-heavy integration company. The answer depends on migration success, attach rate, churn risk, and whether support load declines after migration.

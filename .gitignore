@@ -1,3 +1,6 @@
+# Agent Engineering Challenge runtime artifacts
+notebooks/agents/agent_engineering_challenge/_run_workspace/
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]

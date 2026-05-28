@@ -7,3 +7,7 @@
 
 # Local data (annual reports, PDFs) — not committed
 data/
+
+# But the Agent Engineering Challenge dataset is part of the public contract
+!agent_engineering_challenge/data/
+!agent_engineering_challenge/data/**

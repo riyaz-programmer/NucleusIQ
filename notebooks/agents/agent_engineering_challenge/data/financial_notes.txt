@@ -1,0 +1,32 @@
+Financial notes for Aurora Retail Systems.
+
+Useful facts:
+- Annual recurring revenue: $42.0M.
+- ARR growth: 31% year over year.
+- Net revenue retention: 118%.
+- Gross revenue retention: 89%.
+- Cloud product gross margin: 71%.
+- Blended gross margin: 63%.
+- Professional services revenue: 27% of total revenue.
+- Cash balance: $18.5M.
+- Burn multiple: 1.6x.
+- Sales payback: 14 months.
+
+Conflicting signal:
+- Management calls gross margin "best in class for our segment," but blended gross margin is dragged down by services and three single-tenant deployments.
+- Finance projects services revenue will fall to 17% of total revenue next year, but the services backlog is currently at a 9-month high.
+
+Risk details:
+- Three single-tenant customers represent 21% of revenue and materially reduce gross margin.
+- If two of the three customers migrate successfully, blended gross margin could move from 63% to roughly 68%.
+- If migration fails, infrastructure cost and support load remain elevated.
+- Customer acquisition cost increased 19% because enterprise sales cycles lengthened.
+
+Repeated finance dump:
+ARR, NRR, GRR, CAC, payback, gross margin, cloud margin, services margin, onboarding cost, migration cost, support cost, data warehouse cost, ARR, NRR, GRR, CAC, payback, gross margin, cloud margin, services margin, onboarding cost, migration cost, support cost, data warehouse cost.
+
+Repeated finance dump:
+ARR, NRR, GRR, CAC, payback, gross margin, cloud margin, services margin, onboarding cost, migration cost, support cost, data warehouse cost, ARR, NRR, GRR, CAC, payback, gross margin, cloud margin, services margin, onboarding cost, migration cost, support cost, data warehouse cost.
+
+Analyst note:
+The financial profile is attractive if the company completes cloud migration and reduces services dependence. The biggest financial watch item is whether services revenue and support cost actually decline after migration rather than staying permanently high.

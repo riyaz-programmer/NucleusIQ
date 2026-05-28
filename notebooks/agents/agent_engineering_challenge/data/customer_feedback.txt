@@ -1,0 +1,35 @@
+Customer feedback export for Aurora Retail Systems.
+
+Positive feedback:
+- Enterprise customer Northline Stores says cloud reporting is faster and easier to share with regional managers.
+- MetroMart expanded from inventory management to loyalty analytics after migration.
+- Three cloud-migrated customers increased event volume by more than 40%.
+- Users like the new exception dashboard because store managers can investigate stockouts without filing tickets.
+
+Negative feedback:
+- Smaller retailers say migration documentation assumes too much IT knowledge.
+- Several customers report confusion around POS connector versions.
+- Two customers say support response time slowed during migration waves.
+- One customer says a failed connector test delayed a planned store rollout by four weeks.
+
+Support ticket themes:
+- POS connector setup.
+- Data import mapping.
+- Loyalty module configuration.
+- Permissions for regional managers.
+- Slow first sync after migration.
+
+Repeated customer verbatim noise:
+"The dashboard is fine but the connector setup is confusing." "The dashboard is fine but the connector setup is confusing." "The dashboard is fine but the connector setup is confusing." "The dashboard is fine but the connector setup is confusing." "The dashboard is fine but the connector setup is confusing."
+
+Repeated customer verbatim noise:
+"The dashboard is fine but the connector setup is confusing." "The dashboard is fine but the connector setup is confusing." "The dashboard is fine but the connector setup is confusing." "The dashboard is fine but the connector setup is confusing." "The dashboard is fine but the connector setup is confusing."
+
+Useful synthesis:
+- Customers like the cloud product once migrated.
+- Migration and connector setup are the biggest sources of friction.
+- Expansion appears strongest after migration, especially analytics and loyalty.
+- Support load is front-loaded during migration waves.
+
+Analyst note:
+Customer feedback supports a "painful migration, valuable destination" thesis. This is attractive if onboarding friction is temporary and dangerous if services/support remain permanently high.

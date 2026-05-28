@@ -1,0 +1,30 @@
+Legal and contract notes for Aurora Retail Systems.
+
+Useful facts:
+- Standard contract term is 24 months.
+- Enterprise contracts include uptime commitments.
+- Two large customers negotiated custom data residency clauses.
+- Three customers still require single-tenant infrastructure under old agreements.
+- New cloud contracts move customers to shared infrastructure by default.
+- Termination for convenience exists in 11% of contracts, mostly smaller retailers.
+
+Contract risk:
+- Custom data residency clauses may slow migration for international customers.
+- Single-tenant commitments are the main legal reason infrastructure cost remains high.
+- Some old contracts require 180 days notice before architecture changes.
+- Legal believes two of the three single-tenant customers can be migrated at renewal.
+
+Compliance notes:
+- SOC 2 Type II report is available.
+- ISO 27001 audit is in progress.
+- Data processing agreements are updated for new cloud contracts.
+- One European customer requested extra data localization assurances.
+
+Repeated legal metadata:
+Clause ID, contract owner, renewal date, region, governing law, data residency, support tier, clause ID, contract owner, renewal date, region, governing law, data residency, support tier. This export noise should not be treated as separate legal evidence.
+
+Repeated legal metadata:
+Clause ID, contract owner, renewal date, region, governing law, data residency, support tier, clause ID, contract owner, renewal date, region, governing law, data residency, support tier. This export noise should not be treated as separate legal evidence.
+
+Analyst note:
+Legal risk is manageable but directly connected to the gross-margin thesis. If old single-tenant contracts cannot be migrated, blended margin improvement will be slower than management suggests.

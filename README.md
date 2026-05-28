@@ -245,6 +245,8 @@ Tool-heavy agents fail when every tool result stays in the active prompt forever
 
 See the [context management guide](https://nucleusbox.github.io/nucleusiq-docs/python/nucleusiq/context-management/) and the [observability guide](https://nucleusbox.github.io/nucleusiq-docs/python/nucleusiq/observability/).
 
+Try the runnable [Agent Engineering Challenge 01](notebooks/agents/agent_engineering_challenge/) to test context pressure, noisy tool outputs, and evidence quality on a concrete task.
+
 ---
 
 ## ⚙️ Execution Modes
