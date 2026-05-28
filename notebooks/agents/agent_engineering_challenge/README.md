@@ -2,7 +2,7 @@
 
 > Can an agent finish a tool-heavy research task when tool outputs are large, noisy, repetitive, and unsafe to keep fully in the active prompt?
 
-**Post your `result.json` here →** `https://github.com/nucleusbox/NucleusIQ/discussions/<NUMBER>` *(replace `<NUMBER>` after creating the Discussion)*
+**Post your `result.json` here →** [GitHub Discussion #37](https://github.com/nucleusbox/NucleusIQ/discussions/37)
 
 ---
 
