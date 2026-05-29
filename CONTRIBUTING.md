@@ -27,9 +27,12 @@ Documentation improvements are always welcome. Fix typos, clarify explanations, 
 
 ### Contribute Code
 
-Looking for something to work on? Check issues labeled:
+Looking for something to work on?
+
+- **[Contribution Opportunities](CONTRIBUTION_OPPORTUNITIES.md)** -- curated task list with framework comparison and good-first picks (start here)
 - [`good first issue`](https://github.com/nucleusbox/NucleusIQ/labels/good%20first%20issue) -- great for new contributors
 - [`help wanted`](https://github.com/nucleusbox/NucleusIQ/labels/help%20wanted) -- we'd love your help on these
+- [Agent Engineering Challenge #37](https://github.com/nucleusbox/NucleusIQ/discussions/37) -- post a `result.json` or add a reference submission
 
 If you start working on an issue, comment on it so others know. This avoids duplicate work.
 
