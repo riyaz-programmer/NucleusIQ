@@ -1,6 +1,8 @@
 # Contribution Opportunities
 
-Curated tasks aligned with the NucleusIQ monorepo layout and product backlog (`docs/BACKLOG.md`, maintainer copy).
+Curated tasks aligned with the NucleusIQ monorepo layout and the public roadmap.
+
+**Agent coverage (shipped vs planned):** [NucleusIQ Agent Coverage on Nucleusbox](https://www.nucleusbox.com/nucleusiq-agent-coverage/) — interactive scorecard for **v0.7.12** today and **v0.8–v0.9** targets (no separate docs path in this repo).
 
 **How to start:** pick one item below → comment on [GitHub Issues](https://github.com/nucleusbox/NucleusIQ/issues) or [Discussion #37](https://github.com/nucleusbox/NucleusIQ/discussions/37) → branch `yourname/short-description` → PR (see [CONTRIBUTING.md](CONTRIBUTING.md)).
 
@@ -224,14 +226,16 @@ Each provider is an independent package with `pyproject.toml`, `tests/`, and `ex
 
 ---
 
-## Roadmap summary (from backlog)
+## Roadmap summary
+
+See **[Agent coverage map](https://www.nucleusbox.com/nucleusiq-agent-coverage/)** for per–agent-type scores (research, multi-agent, coding, etc.).
 
 | Version | Focus |
 |---------|--------|
 | **v0.7.13+** | OpenAI Web Search GA; Critic/Refiner native-tool audit; Anthropic Phase C start; `TurnBoundary` |
 | **v0.7.x** | Groq Phase B; Ollama embeddings; tool dedup cache; challenge + examples |
-| **v0.8.0** | `execute("prompt")`; Context Mgmt v2; Agent Types matrix; `DocumentIndexProvider` |
-| **v0.9.0+** | OpenTelemetry tracer; observability export plugins; Pinecone/Chroma providers |
+| **v0.8.0** | `execute("prompt")`; Context Mgmt v2; Agent Types matrix; `DocumentIndexProvider`; Agent-as-Tool; structured sub-agent handoff |
+| **v0.9.0+** | OpenTelemetry tracer; observability export plugins; Pinecone/Chroma providers; A2A (thin adapter) |
 
 ---
 

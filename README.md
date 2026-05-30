@@ -48,12 +48,28 @@
   <a href="#-packages--ecosystem">Packages</a> ·
   <a href="https://nucleusbox.github.io/nucleusiq-docs/">Docs</a> ·
   <a href="CHANGELOG.md">Changelog</a> ·
-  <a href="https://nucleusbox.github.io/nucleusiq-docs/reference/release-notes/v0.7.12/">Release Notes</a>
+  <a href="https://nucleusbox.github.io/nucleusiq-docs/reference/release-notes/v0.7.12/">Release Notes</a> ·
+  <a href="#-agent-coverage-map">Agent coverage</a>
 </p>
 
 ---
 
 > If NucleusIQ helps you build maintainable Python agents, please ⭐ **star the repo** so other engineers can find it while the project is still early.
+
+## 🗺️ Agent coverage map
+
+**[NucleusIQ Agent Coverage — what we ship today vs planned](https://www.nucleusbox.com/nucleusiq-agent-coverage/)** (May 2026, audited on **v0.7.12**)
+
+Interactive scorecard on [Nucleusbox](https://www.nucleusbox.com/): every major agent type (research, multi-agent, coding, and more) with **support today** vs **planned (v0.8–v0.9)** — radars, category tables, 28-pattern matrix, and gap analysis in one page.
+
+| Today (shipped) | Planned (roadmap) |
+|-----------------|-------------------|
+| 3 Gearbox modes (Direct / Standard / Autonomous) | Agent-as-Tool, structured sub-agent handoff |
+| Context engine + telemetry | A2A (thin adapter) |
+| Parallel sub-agents + Critic/Refiner | Public benchmark scorecards & Context Report |
+| File tools + MCP 0.1.0 Stable | Optional shell tool for coding/terminal benches |
+
+**Best fit now:** research and analysis agents. **Honest gaps:** no LLM-callable AgentTool yet, no published benchmark proof, sub-agent synthesis capped at 2K chars.
 
 ## Why Star NucleusIQ?
 
