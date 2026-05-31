@@ -4,10 +4,10 @@
   </a>
 </p>
 
-<h3 align="center">Build AI agents like software systems — maintainable, testable, provider-portable.</h3>
+<h3 align="center">Agents that survive production.</h3>
 
 <p align="center">
-  <em>An open-source, agent-first Python framework for building AI agents that work in real environments — beyond demos — without creating a one-off system you will regret maintaining.</em>
+  <em>Open-source, agent-first Python framework for building AI agents that hold up under real, long, tool-heavy work — reliable, observable, and portable across LLM providers. Not a coding copilot. Not a chatbot. The framework you build serious agents with.</em>
 </p>
 
 <!-- Project status badges -->
@@ -102,11 +102,13 @@ Interactive scorecard on [Nucleusbox](https://www.nucleusbox.com/): every major 
 
 ## What Is NucleusIQ?
 
-NucleusIQ is an **open-source, agent-first Python framework** for building AI agents that work in real environments — beyond demos — without creating a one-off system you will regret maintaining.
+NucleusIQ is an **open-source, agent-first Python framework** for building AI agents that **survive production** — long runs, messy tool output, and real stakes — instead of falling apart the moment they leave the demo.
 
 **In one line:**
 
-> NucleusIQ helps developers build AI agents like software systems: maintainable, testable, provider-portable, and ready for real-world integration.
+> Every AI agent works in the demo. Almost none survive production. NucleusIQ is the framework for the ones that have to — reliable, observable, and provider-portable.
+
+**Why "survive production"?** Most agents work in a demo, then forget what they read, choke when tool output piles up, or fail silently with no explanation. NucleusIQ manages the context window before the model breaks, runs across any LLM provider, and returns a scorecard of exactly what happened on every run.
 
 NucleusIQ is built on a simple belief:
 
