@@ -127,9 +127,7 @@ class AutonomousMode(BaseExecutionMode):
         n = int(getattr(agent.config, "n_parallel_attempts", 1) or 1)
         max_sub = int(getattr(agent.config, "max_sub_agents", 5) or 5)
         is_complex = (
-            analysis.is_complex
-            and len(analysis.sub_tasks) >= 2
-            and max_sub >= 2
+            analysis.is_complex and len(analysis.sub_tasks) >= 2 and max_sub >= 2
         )
 
         if is_complex:
@@ -196,9 +194,7 @@ class AutonomousMode(BaseExecutionMode):
         n = int(getattr(agent.config, "n_parallel_attempts", 1) or 1)
         max_sub = int(getattr(agent.config, "max_sub_agents", 5) or 5)
         is_complex = (
-            analysis.is_complex
-            and len(analysis.sub_tasks) >= 2
-            and max_sub >= 2
+            analysis.is_complex and len(analysis.sub_tasks) >= 2 and max_sub >= 2
         )
 
         if is_complex:
