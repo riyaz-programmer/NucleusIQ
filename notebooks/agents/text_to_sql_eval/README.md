@@ -2,7 +2,7 @@
 
 Evaluate a **production-shaped autonomous text-to-SQL agent** on the Chinook database — five evaluation patterns, three grader types, pass@k trials, production-style safety checks, and an owned scorecard. Built with **NucleusIQ Autonomous mode** (planning + Critic/Refiner + ContextEngine).
 
-**Blog:** [`docs/blog/evaluating-text-to-sql-agents-with-nucleusiq.md`](../../../docs/blog/evaluating-text-to-sql-agents-with-nucleusiq.md)  
+**Blog (published):** [Evaluating text-to-SQL agents with NucleusIQ](https://www.nucleusbox.com/evaluating-text-to-sql-agents-with-nucleusiq/)  
 **LinkedIn drafts (A–D):** [`docs/marketing/linkedin-text-to-sql-showcase.md`](../../../docs/marketing/linkedin-text-to-sql-showcase.md)  
 **Showcase image (blog / LinkedIn):** [`assets/showcase-scorecard.png`](assets/showcase-scorecard.png) — regenerate with `python scripts/render_showcase_image.py`  
 **Build guide:** [`docs/use-cases/text-to-sql-evaluation-showcase.md`](../../../docs/use-cases/text-to-sql-evaluation-showcase.md)  

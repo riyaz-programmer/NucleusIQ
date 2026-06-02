@@ -1,5 +1,6 @@
 # Text-to-SQL Autonomous Agent — Architecture
 
+**Published blog:** [nucleusbox.com/evaluating-text-to-sql-agents-with-nucleusiq](https://www.nucleusbox.com/evaluating-text-to-sql-agents-with-nucleusiq/)  
 **Showcase image (scorecard):** [`assets/showcase-scorecard.png`](assets/showcase-scorecard.png) — run `python scripts/render_showcase_image.py` after `run_all.py`.
 
 ```

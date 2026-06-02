@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Any
 
 from evals.runner import PatternResult
+from links import GITHUB_SHOWCASE_URL, PUBLISHED_BLOG_URL
 
 PKG_ROOT = Path(__file__).resolve().parent.parent
 RESULTS_DIR = PKG_ROOT / "results"
@@ -90,7 +91,12 @@ def write_artifacts(card: dict[str, Any]) -> tuple[Path, Path]:
                 f"- **{label.upper()}:** pass={row.get('passed')} tools={row.get('tool_calls')}"
             )
 
-    lines += ["", f"Reproduce: `{card['repro']}`"]
+    lines += [
+        "",
+        f"**Blog:** {card.get('blog', PUBLISHED_BLOG_URL)}",
+        "",
+        f"Reproduce: `{card['repro']}`",
+    ]
     md_path = RESULTS_DIR / "report.md"
     md_path.write_text("\n".join(lines), encoding="utf-8")
     return json_path, md_path

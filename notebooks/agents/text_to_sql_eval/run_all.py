@@ -28,6 +28,7 @@ from evals.runner import (  # noqa: E402
     eval_trials,
 )
 from evals.scorecard import build_scorecard, write_artifacts  # noqa: E402
+from links import PUBLISHED_BLOG_URL  # noqa: E402
 
 
 async def main() -> int:
@@ -93,6 +94,7 @@ async def main() -> int:
     json_path, md_path = write_artifacts(card)
     print(f"Wrote {json_path}")
     print(f"Wrote {md_path}")
+    print(f"\nBlog: {PUBLISHED_BLOG_URL}")
 
     return 0 if card["patterns_passed"] == card["patterns_total"] else 1
 
