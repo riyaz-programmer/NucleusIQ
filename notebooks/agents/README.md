@@ -7,6 +7,7 @@ End-to-end notebooks demonstrating how to build autonomous agents with NucleusIQ
 | Notebook | Domain | What it shows |
 |----------|--------|--------------|
 | [Agent Engineering Challenge 01](agent_engineering_challenge/README.md) | Agent reliability | Public challenge: fixed task (`TASK.md`), fixed dataset (`data/`), fixed scorecard (`SCORECARD_SPEC.md`), and open `submissions/` — implement with any framework and compare. |
+| [Text-to-SQL Eval Showcase](text_to_sql_eval/README.md) | Agent evaluation | Autonomous text-to-SQL agent, five eval patterns, pytest + `AgentResult` scorecard, production-style safety checks. |
 | [PE Due Diligence](pe_due_diligence.ipynb) | Private Equity | 8 multi-step financial analyses — WACC, DCF, LBO IRR, merger math. Compares Standard vs Autonomous modes with external validation. |
 | [TCS Research Analyst](research_analyst_tcs.ipynb) | Equity research (India IT) | **Full framework showcase**: Gemini + custom `@tool` (PDF + web), Pydantic structured output, plugins (limits + retry), SlidingWindowMemory, CostTracker, streaming, pandas visualization, feature proof dashboard. |
 

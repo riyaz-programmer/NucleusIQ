@@ -147,11 +147,16 @@ def build_workspace_tools(workspace: InMemoryWorkspace) -> list[BaseTool]:
 
     async def write_workspace_artifact(
         title: str,
-        content: str,
+        content: str = "",
         source_refs: list | None = None,
         metadata: dict | None = None,
     ) -> dict[str, Any] | str:
         """Write a bounded artifact into the current run-local workspace."""
+        if not (content or "").strip():
+            return _format_workspace_error(
+                "content is required and must be non-empty. "
+                "Pass the full report body as the content parameter."
+            )
         try:
             entry = workspace.write_artifact(
                 title=title,

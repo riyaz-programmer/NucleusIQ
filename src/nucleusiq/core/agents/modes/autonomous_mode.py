@@ -125,7 +125,12 @@ class AutonomousMode(BaseExecutionMode):
         analysis = await decomposer.analyze(agent, task)
 
         n = int(getattr(agent.config, "n_parallel_attempts", 1) or 1)
-        is_complex = analysis.is_complex and len(analysis.sub_tasks) >= 2
+        max_sub = int(getattr(agent.config, "max_sub_agents", 5) or 5)
+        is_complex = (
+            analysis.is_complex
+            and len(analysis.sub_tasks) >= 2
+            and max_sub >= 2
+        )
 
         if is_complex:
             agent._logger.info(
@@ -189,7 +194,12 @@ class AutonomousMode(BaseExecutionMode):
         analysis = await decomposer.analyze(agent, task)
 
         n = int(getattr(agent.config, "n_parallel_attempts", 1) or 1)
-        is_complex = analysis.is_complex and len(analysis.sub_tasks) >= 2
+        max_sub = int(getattr(agent.config, "max_sub_agents", 5) or 5)
+        is_complex = (
+            analysis.is_complex
+            and len(analysis.sub_tasks) >= 2
+            and max_sub >= 2
+        )
 
         if is_complex:
             agent._logger.info(

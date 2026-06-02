@@ -172,10 +172,30 @@ Each provider is an independent package with `pyproject.toml`, `tests/`, and `ex
 
 ### 2.7 Database providers (stubs) — `src/providers/dbs/`
 
-| Priority | Feature / task | Target version | Effort |
-|----------|----------------|----------------|--------|
-| P3 | **`nucleusiq-pinecone`** — minimal vector store adapter | v0.9.0+ | Large |
-| P3 | **`nucleusiq-chroma`** — minimal vector store adapter | v0.9.0+ | Large |
+> **Strategy:** See **`docs/BACKLOG.md` → RAG landscape & retrieval strategy** for full expectation management and architecture. Vector DBs are **optional packages**, not core. Shared contract should align with L5 `ChunkHit` / `DocumentChunk` in `document_search.py`.
+
+| Priority | Feature / task | Target version | Effort | Notes |
+|----------|----------------|----------------|--------|-------|
+| P1 | **`nucleusiq-chroma`** — minimal vector store adapter (`search`, `get`, `upsert`; `@tool` factory) | v0.8.x | Large | **RAG-04** — first vector backend; local/dev friendly |
+| P2 | **`VectorSearchProvider` protocol** — shared interface for Chroma/Pinecone/Qdrant | v0.8.x | Medium | Align with L5 types; design spike in BACKLOG |
+| P3 | **`nucleusiq-pinecone`** — managed cloud adapter (same contract as Chroma) | v0.9.0+ | Large | **RAG-11** — after Chroma validates contract |
+| P3 | **Qdrant / pgvector adapters** | v0.9.0+ | Large | **RAG-14** — demand-driven only |
+
+**Out of scope for these packages:** PDF parsing, chunking strategy, GraphRAG, RAGAS CI — caller or LlamaIndex owns ingest.
+
+### 2.8 Agent Skills — progressive disclosure
+
+> **Strategy:** See **`docs/BACKLOG.md` → Agent Skills — strategy & backlog** for full design, managed expectations, and **SKL-01–SKL-12** priority stack. Skills are **on-demand instruction modules** (`skills/*/SKILL.md`), distinct from workspace state, RAG, and MCP.
+
+| Priority | Feature / task | Target version | Effort | Notes |
+|----------|----------------|----------------|--------|-------|
+| P0 | **`Skill` + `SkillProvider` protocol** | v0.8.0 | Medium | **SKL-02** |
+| P0 | **`FilesystemSkillProvider`** + **`load_skill` tool** | v0.8.0 | Medium | **SKL-03**, **SKL-04** |
+| P1 | **`AGENTS.md` loader** + `{skill_index}` in system prompt | v0.8.0 | Small | **SKL-05**, **SKL-06** |
+| P1 | **Text-to-SQL showcase** — `skills/` + `AGENTS.md` refactor | v0.8.x | Medium | **SKL-09** — [text_to_sql_eval](notebooks/agents/text_to_sql_eval/) |
+| P2 | Skill telemetry in `AgentResult` + eval graders | v0.9.x | Medium | **SKL-08**, **SKL-11** |
+
+**Out of scope for v1:** Skill marketplace, remote skill registry, embedding-based skill router (**SKL-12** deferred).
 
 ---
 
@@ -234,8 +254,9 @@ See **[Agent coverage map](https://www.nucleusbox.com/nucleusiq-agent-coverage/)
 |---------|--------|
 | **v0.7.13+** | OpenAI Web Search GA; Critic/Refiner native-tool audit; Anthropic Phase C start; `TurnBoundary` |
 | **v0.7.x** | Groq Phase B; Ollama embeddings; tool dedup cache; challenge + examples |
-| **v0.8.0** | `execute("prompt")`; Context Mgmt v2; Agent Types matrix; `DocumentIndexProvider`; Agent-as-Tool; structured sub-agent handoff |
-| **v0.9.0+** | OpenTelemetry tracer; observability export plugins; Pinecone/Chroma providers; A2A (thin adapter) |
+| **v0.8.0** | `execute("prompt")`; Context Mgmt v2; Agent Types matrix; **`DocumentIndexProvider`**; **Agentic RAG notebook**; **`nucleusiq-chroma` alpha**; **Agent Skills** (`SkillProvider`, `load_skill`); Agent-as-Tool; structured sub-agent handoff |
+| **v0.8.x–v0.9.0** | Retrieval `@tool` surface; provider RAG examples; **`nucleusiq-pinecone`**; optional hybrid lexical+vector |
+| **v0.9.0+** | OpenTelemetry tracer; observability export plugins; Qdrant/pgvector adapters; A2A (thin adapter) |
 
 ---
 

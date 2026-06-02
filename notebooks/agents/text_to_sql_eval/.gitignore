@@ -1,0 +1,6 @@
+data/*.sqlite
+results/scorecard.json
+results/report.md
+.venv/
+__pycache__/
+.pytest_cache/

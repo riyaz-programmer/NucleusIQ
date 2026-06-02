@@ -229,11 +229,21 @@ class Decomposer:
         from nucleusiq.agents.agent import Agent
 
         try:
+            from nucleusiq.prompts import PromptFactory, PromptTechnique
+
+            sub_prompt = PromptFactory.create_prompt(
+                technique=PromptTechnique.ZERO_SHOT
+            ).configure(
+                system=(
+                    f"You are a focused sub-analyst for {parent.name}. "
+                    f"Role: {parent.role}. Complete only your assigned sub-task."
+                ),
+            )
             sub = Agent(
                 name=f"{parent.name}-sub-{sub_task_id}",
                 role=parent.role,
                 objective=sub_task_objective,
-                prompt=parent.prompt,
+                prompt=sub_prompt,
                 llm=parent.llm,
                 tools=list(parent.tools),
                 memory=None,
